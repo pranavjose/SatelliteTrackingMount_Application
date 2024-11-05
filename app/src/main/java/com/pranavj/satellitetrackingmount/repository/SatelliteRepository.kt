@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class SatelliteRepository(private val context: Context) {
-    //testing 2
+    
     private val satelliteDao: SatelliteDao by lazy {
         SatelliteDatabase.getDatabase(context).satelliteDao()
     }
