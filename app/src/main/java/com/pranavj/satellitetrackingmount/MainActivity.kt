@@ -1,13 +1,13 @@
 package com.pranavj.satellitetrackingmount
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.pranavj.satellitetrackingmount.model.SatelliteDatabase
+import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
 import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
 import kotlinx.coroutines.launch
+import org.orekit.propagation.analytical.tle.TLE
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,40 +17,29 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize Orekit
         OrekitInitializer.initializeOrekit(this)
-//        super.onCreate(savedInstanceState)
-//        setContentView(R.layout.activity_main)
-//
-//        // Create an instance of the SatelliteRepository
-//        val satelliteRepository = SatelliteRepository(this)
-//
-//        // Launch a coroutine to handle database operations
-//        lifecycleScope.launch {
-//            val satellites = satelliteRepository.getSatellitesFromTLE()
-//
-//            // Insert parsed satellites into the database asynchronously
-//            satelliteRepository.insertSatellites(satellites)
-//
-//            // Fetch and log all satellites from the database to verify insertion
-//            val satelliteDao = SatelliteDatabase.getDatabase(this@MainActivity).satelliteDao()
-//            val storedSatellites = satelliteDao.getAllSatellites()
-//
-//
-//            // Log the satellite details to verify successful insertion
-//            storedSatellites.forEach {
-//                Log.d("Satellite", """
-//                    Name: ${it.name}
-//                    NORAD Catalog Number: ${it.noradCatalogNumber}
-//                    International Designator: ${it.internationalDesignator}
-//                    Period (minutes): ${it.periodMinutes}
-//                    Inclination (degrees): ${it.inclinationDegrees}
-//                    Apogee Height (km): ${it.apogeeHeightKm}
-//                    Perigee Height (km): ${it.perigeeHeightKm}
-//                    Eccentricity: ${it.eccentricity}
-//                    Line 1: ${it.line1}
-//                    Line 2: ${it.line2}
-//                """.trimIndent())
-//            }
-//        }
+
+        // Create an instance of the SatelliteRepository
+        val satelliteRepository = SatelliteRepository(this)
+
+        // Launch a coroutine to test the creation of TLE objects
+        lifecycleScope.launch {
+            try {
+                // Retrieve the list of TLE objects
+                val tleObjects: List<TLE> = satelliteRepository.getTLEObjects()
+
+                // Log the results to verify the TLE creation
+                if (tleObjects.isNotEmpty()) {
+                    Log.d("MainActivity", "Successfully retrieved ${tleObjects.size} TLE objects.")
+                    tleObjects.forEach { tle ->
+                        Log.d("MainActivity", "TLE Object: Line 1 - ${tle.line1}, Line 2 - ${tle.line2}")
+                    }
+                } else {
+                    Log.d("MainActivity", "No TLE objects retrieved from the database.")
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error retrieving and creating TLE objects: ${e.message}")
+            }
+        }
 
     }
 }

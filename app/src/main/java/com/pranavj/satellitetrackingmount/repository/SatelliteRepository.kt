@@ -4,8 +4,13 @@ import android.content.Context
 import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.model.SatelliteDao
 import com.pranavj.satellitetrackingmount.model.SatelliteDatabase
+import com.pranavj.satellitetrackingmount.model.SatelliteDao.TLELines
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.orekit.propagation.analytical.tle.TLE
+import android.util.Log
+
+
 
 class SatelliteRepository(private val context: Context) {
     
@@ -17,6 +22,22 @@ class SatelliteRepository(private val context: Context) {
     fun getSatellitesFromTLE(): List<Satellite> {
         val tleLines = readTLEFile(context)
         return parseTLEFile(tleLines)
+    }
+
+    suspend fun getTLEObjects(): List<TLE> = withContext(Dispatchers.IO) {
+        val tleLinesList = satelliteDao.getAllTLELines() // Fetch only line1 and line2
+        val tleObjects = mutableListOf<TLE>()
+        for (tleLines in tleLinesList) {
+            try {
+                // Create TLE object using line1 and line2
+                val tle = TLE(tleLines.line1, tleLines.line2)
+                tleObjects.add(tle)
+                Log.d("TLE Creation", "TLE created successfully: ${tle.line1} | ${tle.line2}")
+            } catch (e: Exception) {
+                Log.e("TLE Creation Error", "Error creating TLE object: ${e.message}")
+            }
+        }
+        return@withContext tleObjects
     }
 
     // Function to insert satellite data asynchronously
