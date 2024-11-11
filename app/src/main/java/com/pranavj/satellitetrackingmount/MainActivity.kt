@@ -44,13 +44,21 @@ class MainActivity : AppCompatActivity() {
             mapView.model.frameBufferModel.overdrawFactor
         )
 
-        // Load the .map file from assets and copy it to internal storage
-        val mapFile = copyMapFileToInternalStorage("mapsforge/world.map")
-        if (mapFile != null) {
-            val mapDataStore = MapFile(mapFile)
+        try {
+            // Load the .map file from the assets folder and copy it to a temporary file
+            val inputStream: InputStream = assets.open("mapsforge/world.map")
+            val tempFile = File.createTempFile("world", ".map", cacheDir)
+            FileOutputStream(tempFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+
+            // Create a MapFile using the temporary file
+            val mapFile = MapFile(tempFile)
+
+            // Create a TileRendererLayer to display the map
             val tileRendererLayer = TileRendererLayer(
                 tileCache,
-                mapDataStore,
+                mapFile,
                 mapView.model.mapViewPosition,
                 AndroidGraphicFactory.INSTANCE
             ).apply {
@@ -61,30 +69,15 @@ class MainActivity : AppCompatActivity() {
             mapView.layerManager.layers.add(tileRendererLayer)
 
             // Set initial map position and zoom level
-            mapView.model.mapViewPosition.mapPosition = MapPosition(LatLong(0.0, 0.0), 5)
-        } else {
-            println("Failed to load map file.")
-        }
-    }
+            mapView.model.mapViewPosition.mapPosition = MapPosition(LatLong(0.0, 0.0), 2)
 
-    private fun copyMapFileToInternalStorage(assetFileName: String): File? {
-        return try {
-            val inputStream: InputStream = assets.open(assetFileName)
-            val tempFile = File(filesDir, "temp_map.map")
-            FileOutputStream(tempFile).use { outputStream ->
-                val buffer = ByteArray(1024)
-                var length: Int
-                while (inputStream.read(buffer).also { length = it } > 0) {
-                    outputStream.write(buffer, 0, length)
-                }
-            }
-            tempFile
+
+
         } catch (e: Exception) {
+            // Handle the exception (e.g., show a toast, log error)
             e.printStackTrace()
-            null
         }
     }
-
 
     override fun onDestroy() {
         super.onDestroy()
