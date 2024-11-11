@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Satellite Tracking Mount</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoicHJhbmF2am9zZSIsImEiOiJjbTNjMWRwdGoxamRiMmtvZ2ExdHN1NmliIn0.7keoJjAq4Xt3Xlclicy_sg</string>
 </resources>

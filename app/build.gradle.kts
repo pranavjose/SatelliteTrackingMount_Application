@@ -55,4 +55,11 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 
     implementation("org.orekit:orekit:12.2") //orekit library
+
+    implementation("com.mapbox.maps:android:11.7.2")
+//    // If you're using compose also add the compose extension
+//    implementation("com.mapbox.extension:maps-compose:11.7.2")
+    // https://mvnrepository.com/artifact/com.mapbox.mapboxsdk/mapbox-android-sdk
+//    implementation("com.mapbox.maps:android:10.9.0")
+
 }
