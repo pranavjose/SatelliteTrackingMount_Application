@@ -10,9 +10,9 @@ class UserLocationManager {
     // Function to create the user's location as a TopocentricFrame
     fun createUserLocation(): TopocentricFrame {
         // Step 1: Hardcoded user's latitude, longitude, and altitude
-        val userLatitude = 34.0 // Latitude in degrees (example value)
-        val userLongitude = -118.0 // Longitude in degrees (example value)
-        val userAltitude = 100.0 // Altitude in meters (example value)
+        val userLatitude = 30.62 // Latitude in degrees (example value)
+        val userLongitude = -96.35 // Longitude in degrees (example value)
+        val userAltitude = 109.0 // Altitude in meters (example value)
 
         // Step 2: Convert latitude and longitude from degrees to radians
         val latitudeRadians = Math.toRadians(userLatitude)

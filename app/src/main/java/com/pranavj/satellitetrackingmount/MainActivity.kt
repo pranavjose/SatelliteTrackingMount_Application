@@ -56,8 +56,8 @@ class MainActivity : AppCompatActivity() {
                             tle,
                             userTopocentricFrame,
                             startDate,
-                            durationSeconds = 3600.0, // Total duration: 1 hour
-                            stepSeconds = 60.0 // Step interval: 1 minute
+                            durationSeconds = 180.0, // Total duration: 3 min
+                            stepSeconds = 0.5 // Step interval: 0.5 sec
                         )
 
                         // Log the generated path

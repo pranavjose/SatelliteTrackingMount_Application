@@ -34,6 +34,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    buildFeatures{
+        compose = true //Enable compose
+    }
+    composeOptions{
+        kotlinCompilerExtensionVersion = "1.3.2"
+    }
 }
 
 dependencies {
@@ -41,6 +47,15 @@ dependencies {
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.8.0")
+
+    //Jetpack Compose Dependencies
+    implementation(platform("androidx.compose:compose-bom:2023.03.00")) // BOM for consistent versions
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.activity:activity-compose:1.7.0")
+
     //Room dependencies for database setup
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")  // Add Room KTX for coroutine support
@@ -57,9 +72,8 @@ dependencies {
     implementation("org.orekit:orekit:12.2") //orekit library
 
     implementation("com.mapbox.maps:android:11.7.2")
-//    // If you're using compose also add the compose extension
-//    implementation("com.mapbox.extension:maps-compose:11.7.2")
-    // https://mvnrepository.com/artifact/com.mapbox.mapboxsdk/mapbox-android-sdk
-//    implementation("com.mapbox.maps:android:10.9.0")
+    // If you're using compose also add the compose extension
+    implementation("com.mapbox.extension:maps-compose:11.7.2")
+
 
 }
