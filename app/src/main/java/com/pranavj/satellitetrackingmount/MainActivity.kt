@@ -1,8 +1,16 @@
 package com.pranavj.satellitetrackingmount
 
 //import org.mapsforge.map.view.MapView
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
+import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
+import com.pranavj.satellitetrackingmount.ui.SatelliteListActivity
+import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
+import com.pranavj.satellitetrackingmount.utils.UserLocationManager
+import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
 import org.mapsforge.core.model.LatLong
 import org.mapsforge.core.model.MapPosition
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory
@@ -14,26 +22,61 @@ import org.mapsforge.map.reader.MapFile
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var mapView: MapView
 
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        // Initialize Orekit
+        OrekitInitializer.initializeOrekit(this)
+
+        // Create an instance of the SatelliteRepository
+        val satelliteRepository = SatelliteRepository(this)
+        val satellitePropagator = SatellitePropagator()
+        // Create an instance of UserLocationManager
+        val userLocationManager = UserLocationManager()
+
+        // Create the user's location TopocentricFrame
+        val userTopocentricFrame = userLocationManager.createUserLocation()
+
+        // Insert data into the database (for testing purposes)
+        lifecycleScope.launch {
+            val satellites = satelliteRepository.getSatellitesFromTLE() // Fetches satellite data (assuming this is implemented)
+            satelliteRepository.insertSatellites(satellites) // Insert the data
+            Log.d("MainActivity", "Inserted ${satellites.size} satellites.")
+        }
+
+        // Log the details to verify the function works as intended
+        Log.d("UserLocationTest", "User Topocentric Frame created: ${userTopocentricFrame.name}")
 
         // Initialize the AndroidGraphicFactory
         AndroidGraphicFactory.createInstance(application)
 
+
+        // Initialize mapView from the layout
+        mapView = findViewById(R.id.mapView)
+
+        // Configure the MapView
+        mapView.mapScaleBar.isVisible = true
+        mapView.setBuiltInZoomControls(true)
+
         // Create and configure the MapView
-        mapView = MapView(this).also {
-            it.mapScaleBar.isVisible = true
-            it.setBuiltInZoomControls(true)
-        }
+//        mapView = MapView(this).also {
+//            it.mapScaleBar.isVisible = true
+//            it.setBuiltInZoomControls(true)
+//        }
 
         // Set the MapView as the content view
-        setContentView(mapView)
+//        setContentView(mapView)
 
         // In your onCreate() method or wherever needed
         val tileCache: TileCache = AndroidUtil.createTileCache(
@@ -74,8 +117,15 @@ class MainActivity : AppCompatActivity() {
 
 
         } catch (e: Exception) {
-            // Handle the exception (e.g., show a toast, log error)
+            // Handle the exception
             e.printStackTrace()
+        }
+
+        // Button to navigate to SatelliteListActivity
+        val btnViewSatellites: Button = findViewById(R.id.btnViewSatellites)
+        btnViewSatellites.setOnClickListener {
+            val intent = Intent(this, SatelliteListActivity::class.java)
+            startActivity(intent)
         }
     }
 
