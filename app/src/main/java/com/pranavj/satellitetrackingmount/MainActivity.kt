@@ -1,78 +1,58 @@
 package com.pranavj.satellitetrackingmount
 
 import android.os.Bundle
-import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
-import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
-import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
-import com.pranavj.satellitetrackingmount.utils.UserLocationManager
-import kotlinx.coroutines.launch
-import org.orekit.propagation.analytical.tle.TLE
-import org.orekit.time.AbsoluteDate
-import org.orekit.time.TimeScalesFactory
-import java.util.Calendar
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapInitOptions
+import com.mapbox.maps.MapView
+import com.mapbox.maps.Style
+import com.mapbox.maps.MapOptions
+//import com.mapbox.maps.plugin.Plugin
+//import com.mapbox.maps.plugin.attribution.AttributionPlugin
+//import com.mapbox.maps.plugin.gestures.GesturesPlugin
+//import com.mapbox.maps.plugin.compass.CompassPlugin
+//import com.mapbox.maps.plugin.logo.LogoPlugin
 
-class MainActivity : AppCompatActivity() {
-
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        // Initialize Orekit
-        OrekitInitializer.initializeOrekit(this)
-
-        // Create an instance of the SatelliteRepository
-        val satelliteRepository = SatelliteRepository(this)
-        val satellitePropagator = SatellitePropagator()
-        // Create an instance of UserLocationManager
-        val userLocationManager = UserLocationManager()
-
-        // Create the user's location TopocentricFrame
-        val userTopocentricFrame = userLocationManager.createUserLocation()
-
-        // Log the details to verify the function works as intended
-//        Log.d("UserLocationTest", "User Topocentric Frame created: ${userTopocentricFrame.name}")
-
-
-
-        // Define a sample start date for propagation
-        val utc = TimeScalesFactory.getUTC()
-        val calendar = Calendar.getInstance()
-        calendar.set(2024, Calendar.NOVEMBER, 10, 12, 0, 0) // Example start date: November 10, 2024, 12:00:00 UTC
-        val startDate = AbsoluteDate(calendar.time, utc)
-
-        // Launch a coroutine to generate and log the satellite path
-        lifecycleScope.launch {
-            try {
-                // Retrieve TLE objects from the repository
-                val tleObjects = satelliteRepository.getTLEObjects()
-
-                if (tleObjects.isNotEmpty()) {
-                    tleObjects.forEach { tle ->
-                        // Generate a path for 1 hour with 1-minute intervals (example values)
-                        val path = satellitePropagator.generateAzimuthElevationPath(
-                            tle,
-                            userTopocentricFrame,
-                            startDate,
-                            durationSeconds = 180.0, // Total duration: 3 min
-                            stepSeconds = 0.5 // Step interval: 0.5 sec
-                        )
-
-                        // Log the generated path
-                        Log.d("SatellitePath", "Path for Satellite TLE: ${tle.line1} | ${tle.line2}")
-                        path.forEachIndexed { index, (azimuth, elevation) ->
-                            Log.d("SatellitePath", "Step $index - Azimuth: $azimuth degrees, Elevation: $elevation degrees")
-                        }
-                    }
-                } else {
-                    Log.d("MainActivity", "No TLE objects found in the database.")
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error generating satellite path: ${e.message}")
-            }
+        setContent {
+            MapScreen()
         }
-
     }
+}
+@Composable
+fun MapScreen() {
+    // Retrieve context in a composable-safe way
+    val context = LocalContext.current
+
+    // Configure MapInitOptions
+    val mapInitOptions = remember {
+        MapInitOptions(
+            context = context,
+            mapOptions = MapOptions.Builder().build(), // Basic MapOptions setup
+            cameraOptions = CameraOptions.Builder()
+                .center(Point.fromLngLat(0.0, 0.0)) // Longitude, Latitude
+                .zoom(2.0) // Default zoom level
+                .build(),
+            styleUri = Style.MAPBOX_STREETS // Set the default style
+        )
+    }
+
+    // Initialize MapView
+    val mapView = remember { MapView(context, mapInitOptions) }
+
+    // Display the MapView in Compose
+    AndroidView(
+        factory = { mapView },
+        modifier = Modifier.fillMaxSize()
+    )
 }

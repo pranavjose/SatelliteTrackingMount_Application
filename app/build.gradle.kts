@@ -38,7 +38,7 @@ android {
         compose = true //Enable compose
     }
     composeOptions{
-        kotlinCompilerExtensionVersion = "1.3.2"
+        kotlinCompilerExtensionVersion = "1.5.2"
     }
 }
 
@@ -49,8 +49,9 @@ dependencies {
     implementation("com.google.android.material:material:1.8.0")
 
     //Jetpack Compose Dependencies
-    implementation(platform("androidx.compose:compose-bom:2023.03.00")) // BOM for consistent versions
+    implementation(platform("androidx.compose:compose-bom:2023.09.01")) // BOM for consistent versions
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
