@@ -1,5 +1,7 @@
 package com.pranavj.satellitetrackingmount.utils
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.util.Log
 import org.orekit.bodies.GeodeticPoint
 import org.orekit.bodies.OneAxisEllipsoid
@@ -7,30 +9,37 @@ import org.orekit.frames.FramesFactory
 import org.orekit.frames.TopocentricFrame
 import org.orekit.utils.Constants
 import org.orekit.utils.IERSConventions
-class UserLocationManager {
-    // Function to create the user's location as a TopocentricFrame
-    fun createUserLocation(): TopocentricFrame {
-        // Step 1: Hardcoded user's latitude, longitude, and altitude
-        val userLatitude = 40.7128 // Latitude in degrees (example value)
-        val userLongitude = -74.0060 // Longitude in degrees (example value)
-        val userAltitude = 10.0 // Altitude in meters (example value)
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+class UserLocationManager(private val context: Context) {
 
-        // Step 2: Convert latitude and longitude from degrees to radians
-        val latitudeRadians = Math.toRadians(userLatitude)
-        val longitudeRadians = Math.toRadians(userLongitude)
-        Log.d("UserLocationManager", "User location in radians: lat=$latitudeRadians, lon=$longitudeRadians, alt=$userAltitude")
-        // Step 3: Create a GeodeticPoint representing the user's position
-        val geodeticPoint = GeodeticPoint(latitudeRadians, longitudeRadians, userAltitude)
+    private val fusedLocationClient: FusedLocationProviderClient =
+        LocationServices.getFusedLocationProviderClient(context)
 
-        // Step 4: Create a BodyShape for the Earth (using WGS84 ellipsoid model)
-        val earthShape = OneAxisEllipsoid(
-            Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
-            Constants.WGS84_EARTH_FLATTENING,
-            FramesFactory.getITRF(IERSConventions.IERS_2010, true)
-        )
+    @SuppressLint("MissingPermission")
+    fun fetchRealUserLocation(onLocationAvailable: (TopocentricFrame) -> Unit) {
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (location != null) {
+                val latitudeRadians = Math.toRadians(location.latitude)
+                val longitudeRadians = Math.toRadians(location.longitude)
+                val altitude = location.altitude
 
-        // Step 5: Create a Topocentric Frame for the user's location
-        return TopocentricFrame(earthShape, geodeticPoint, "User Location")
+                Log.d("UserLocationManager", "Real Location: lat=${location.latitude}, lon=${location.longitude}, alt=$altitude")
+
+                // Convert to Orekit's GeodeticPoint and TopocentricFrame
+                val geodeticPoint = GeodeticPoint(latitudeRadians, longitudeRadians, altitude)
+                val earthShape = OneAxisEllipsoid(
+                    Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
+                    Constants.WGS84_EARTH_FLATTENING,
+                    FramesFactory.getITRF(IERSConventions.IERS_2010, true)
+                )
+                val userTopocentricFrame = TopocentricFrame(earthShape, geodeticPoint, "User Location")
+
+                // Pass the TopocentricFrame back
+                onLocationAvailable(userTopocentricFrame)
+            } else {
+                Log.e("UserLocationManager", "Failed to fetch location.")
+            }
+        }
     }
-
 }

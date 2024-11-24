@@ -1,12 +1,15 @@
 package com.pranavj.satellitetrackingmount
 
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 //import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +18,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 //import androidx.lifecycle.lifecycleScope
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -40,28 +46,44 @@ import com.mapbox.maps.plugin.annotation.annotations
 //import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
-
+import android.Manifest
+import androidx.compose.runtime.setValue
 
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-
         setContent {
-            //MapScreen()
-            MainContent(mainViewModel)
+            RequestLocationPermission(
+                onPermissionGranted = {
+                    MainContent(mainViewModel)
+                },
+                onPermissionDenied = {
+                    NoPermissionContent()
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun NoPermissionContent() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Permission is required to access your location.")
         }
     }
 }
+
 
 @Composable
 fun MainContent(mainViewModel: MainViewModel) {
     // Collect the userTopocentricFrame as state
     val userTopocentricFrameState = mainViewModel.userTopocentricFrame.collectAsState()
-
     // Get the current value
     val userTopocentricFrame = userTopocentricFrameState.value
 
@@ -149,5 +171,37 @@ fun MapScreen(userLongitude: Double, userLatitude: Double) {
 
             pointAnnotationManager.create(pointAnnotationOptions)
         }
+    }
+}
+
+
+@Composable
+fun RequestLocationPermission(onPermissionGranted: @Composable () -> Unit, onPermissionDenied: @Composable () -> Unit) {
+    val context = LocalContext.current
+    var permissionGranted by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            permissionGranted = granted
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionGranted = true
+        } else {
+            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    if (permissionGranted) {
+        onPermissionGranted()
+    } else {
+        onPermissionDenied()
     }
 }

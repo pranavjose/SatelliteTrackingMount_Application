@@ -26,6 +26,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _userTopocentricFrame = MutableStateFlow<TopocentricFrame?>(null)
     val userTopocentricFrame = _userTopocentricFrame.asStateFlow()
 
+    private val userLocationManager = UserLocationManager(application.applicationContext)
     init {
         // Initialize Orekit
         OrekitInitializer.initializeOrekit(application)
@@ -53,19 +54,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun initializeUserLocation() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val userLocationManager = UserLocationManager()
-                val userTopocentricFrame = userLocationManager.createUserLocation()
-
-                // Log the TopocentricFrame values
-                val geodeticPoint = userTopocentricFrame.point
-                println("TopocentricFrame: lat=${geodeticPoint.latitude}, lon=${geodeticPoint.longitude}, alt=${geodeticPoint.altitude}")
-
-                // Update the StateFlow with the user's TopocentricFrame
+            userLocationManager.fetchRealUserLocation { userTopocentricFrame ->
                 _userTopocentricFrame.value = userTopocentricFrame
-            } catch (e: Exception) {
-                // Handle exceptions (e.g., logging, notifying the user)
-                e.printStackTrace()
             }
         }
     }
