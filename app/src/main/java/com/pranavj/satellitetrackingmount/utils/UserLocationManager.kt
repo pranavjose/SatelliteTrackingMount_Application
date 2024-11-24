@@ -1,5 +1,6 @@
 package com.pranavj.satellitetrackingmount.utils
 
+import android.util.Log
 import org.orekit.bodies.GeodeticPoint
 import org.orekit.bodies.OneAxisEllipsoid
 import org.orekit.frames.FramesFactory
@@ -10,14 +11,14 @@ class UserLocationManager {
     // Function to create the user's location as a TopocentricFrame
     fun createUserLocation(): TopocentricFrame {
         // Step 1: Hardcoded user's latitude, longitude, and altitude
-        val userLatitude = 30.62 // Latitude in degrees (example value)
-        val userLongitude = -96.35 // Longitude in degrees (example value)
-        val userAltitude = 109.0 // Altitude in meters (example value)
+        val userLatitude = 40.7128 // Latitude in degrees (example value)
+        val userLongitude = -74.0060 // Longitude in degrees (example value)
+        val userAltitude = 10.0 // Altitude in meters (example value)
 
         // Step 2: Convert latitude and longitude from degrees to radians
         val latitudeRadians = Math.toRadians(userLatitude)
         val longitudeRadians = Math.toRadians(userLongitude)
-
+        Log.d("UserLocationManager", "User location in radians: lat=$latitudeRadians, lon=$longitudeRadians, alt=$userAltitude")
         // Step 3: Create a GeodeticPoint representing the user's position
         val geodeticPoint = GeodeticPoint(latitudeRadians, longitudeRadians, userAltitude)
 

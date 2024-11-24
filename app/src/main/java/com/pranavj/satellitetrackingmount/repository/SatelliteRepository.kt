@@ -18,6 +18,9 @@ class SatelliteRepository(private val context: Context) {
         SatelliteDatabase.getDatabase(context).satelliteDao()
     }
 
+    suspend fun getAllSatellites(): List<Satellite> {
+        return satelliteDao.getAllSatellites()
+    }
     // Function to read the TLE file and return parsed satellite data
     fun getSatellitesFromTLE(): List<Satellite> {
         val tleLines = readTLEFile(context)
