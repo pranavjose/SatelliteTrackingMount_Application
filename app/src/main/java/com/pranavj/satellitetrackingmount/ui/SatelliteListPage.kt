@@ -70,13 +70,13 @@ fun SatelliteListItem(satellite: Satellite, mainViewModel: MainViewModel) {
                 // Plot Satellite Path
                 mainViewModel.plotSatellitePath(satellite.noradCatalogNumber)
             }) {
-                Text("Plot Path")
+                Text("Plot Path for the next 90min")
             }
             Button(onClick = {
                 // Generate Azimuth/Elevation
                 mainViewModel.generateAzimuthElevation(satellite.noradCatalogNumber)
             }) {
-                Text("Az/El Data")
+                Text("Send Az/El Data")
             }
         }
     }

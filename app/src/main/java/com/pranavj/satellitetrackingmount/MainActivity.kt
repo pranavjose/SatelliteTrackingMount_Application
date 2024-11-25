@@ -54,6 +54,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
 import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
 import kotlinx.coroutines.launch
 
@@ -115,38 +117,39 @@ fun AppContent(mainViewModel: MainViewModel) {
     }
 }
 
+//@Composable
+//fun MainContent(mainViewModel: MainViewModel) {
+//    // Collect the userTopocentricFrame as state
+//    val userTopocentricFrameState = mainViewModel.userTopocentricFrame.collectAsState()
+//    // Get the current value
+//    val userTopocentricFrame = userTopocentricFrameState.value
+//
+//    if (userTopocentricFrame != null) {
+//        // Safely use the frame
+//        MapScreen(
+//            userLongitude = userTopocentricFrame.point.longitude,
+//            userLatitude = userTopocentricFrame.point.latitude
+//        )
+//    } else {
+//        // Show a loading indicator while the user's location is being determined
+//        Box(
+//            modifier = Modifier.fillMaxSize(),
+//            contentAlignment = Alignment.Center
+//        ) {
+//            Column(
+//                horizontalAlignment = Alignment.CenterHorizontally
+//            ) {
+//                CircularProgressIndicator()
+//                Text(text = "Loading user location...", modifier = Modifier.padding(top = 16.dp))
+//            }
+//        }
+//    }
+//}
+
+
 @Composable
-fun MainContent(mainViewModel: MainViewModel) {
-    // Collect the userTopocentricFrame as state
-    val userTopocentricFrameState = mainViewModel.userTopocentricFrame.collectAsState()
-    // Get the current value
-    val userTopocentricFrame = userTopocentricFrameState.value
-
-    if (userTopocentricFrame != null) {
-        // Safely use the frame
-        MapScreen(
-            userLongitude = userTopocentricFrame.point.longitude,
-            userLatitude = userTopocentricFrame.point.latitude
-        )
-    } else {
-        // Show a loading indicator while the user's location is being determined
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator()
-                Text(text = "Loading user location...", modifier = Modifier.padding(top = 16.dp))
-            }
-        }
-    }
-}
-
-
-@Composable
-fun MapScreen(userLongitude: Double, userLatitude: Double) {
+fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainViewModel) {
+    val satellitePath by mainViewModel.satellitePath.collectAsState()
     // Retrieve context in a composable-safe way
     val context = LocalContext.current
     // Convert radians to degrees for Mapbox
@@ -188,23 +191,38 @@ fun MapScreen(userLongitude: Double, userLatitude: Double) {
                 .build()
         )
         mapboxMap.subscribeStyleLoaded { _ ->
-            // Add a static marker for the user's location after the style is loaded
             mapboxMap.getStyle { style ->
-                // Load the marker icon from drawable and scale it
+                val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+                pointAnnotationManager.deleteAll()
+                // Add user location marker
+                val userLocationPoint = Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)
+                // Load and scale marker icon for the user's location
                 val markerBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.marker_icon)
-                val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false) // Adjust size as needed
+                val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false)
                 style.addImage("marker-icon", scaledBitmap)
+
+                val userMarker = PointAnnotationOptions()
+                    .withPoint(userLocationPoint)
+                    .withIconImage("marker-icon")
+                pointAnnotationManager.create(userMarker)
+
+                // Plot the satellite path if available
+                if (satellitePath.isNotEmpty()) {
+                    val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
+                    polylineAnnotationManager.deleteAll()//clear old polylines
+                    // Add a debug log for each latitude and longitude point
+                    satellitePath.forEach { (lat, lon) ->
+                        Log.d("SatellitePathPlot", "Latitude: $lat, Longitude: $lon")
+                    }
+
+                    val polylineOptions = PolylineAnnotationOptions()
+                        .withPoints(satellitePath.map { (lat, lon) -> Point.fromLngLat(lon, lat) }) // Destructure Pair
+                        .withLineWidth(4.0)
+                        .withLineColor("#FF0000") // Example color: red
+                    polylineAnnotationManager.create(polylineOptions)
+                    Log.d("MapScreen", "Plotted satellite path with ${satellitePath.size} points.")
+                }
             }
-            val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
-
-            val userLocationPoint = Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)
-            Log.d("MapScreen", "Creating marker at: $userLocationPoint")
-
-            val pointAnnotationOptions = PointAnnotationOptions()
-                .withPoint(userLocationPoint)
-                .withIconImage("marker-icon") // Replace with your custom marker image
-
-            pointAnnotationManager.create(pointAnnotationOptions)
         }
     }
 }
@@ -285,7 +303,8 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
             // Render the map only after the user's location is available
             MapScreen(
                 userLongitude = userTopocentricFrame!!.point.longitude,
-                userLatitude = userTopocentricFrame!!.point.latitude
+                userLatitude = userTopocentricFrame!!.point.latitude,
+                mainViewModel = mainViewModel
             )
         }
 

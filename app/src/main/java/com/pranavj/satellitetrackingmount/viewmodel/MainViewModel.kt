@@ -84,22 +84,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun testGetSatelliteByNoradId(noradId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val satellite = satelliteRepository.getSatelliteByNoradId(noradId)
-                Log.d("SatelliteTest", "NORAD ID: $noradId, Name: ${satellite.name}, TLE1: ${satellite.line1}, TLE2: ${satellite.line2}")
-            } catch (e: Exception) {
-                Log.e("SatelliteTest", "Error fetching satellite by NORAD ID: ${e.message}")
-            }
-        }
-    }
 
-    private val _satellitePath = MutableStateFlow<List<GeodeticPoint>>(emptyList())
+    private val _satellitePath = MutableStateFlow<List<Pair<Double,Double>>>(emptyList())
     val satellitePath = _satellitePath.asStateFlow()
     fun plotSatellitePath(noradId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                //clear old path
+                _satellitePath.value = emptyList()
                 // Fetch satellite by NORAD ID
                 val satellite = satelliteRepository.getSatelliteByNoradId(noradId)
 
@@ -111,9 +103,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     duration = 5400.0, // Fixed duration for now
                     stepSize = 30.0  // Fixed step size for now
                 )
+                if (latLonPath.isEmpty()) {
+                    Log.e("SatellitePath", "Generated path is empty for NORAD ID $noradId.")
+                } else {
+                    Log.d("SatellitePath", "Path for ${satellite.name} generated with ${latLonPath.size} points.")
+                }
 
-                // Log the result (placeholder for now)
-                Log.d("SatellitePath", "Path for ${satellite.name}: $latLonPath")
+                // Emit the new path on the Main dispatcher
+                launch(Dispatchers.Main) {
+                    _satellitePath.value = latLonPath
+                }
             } catch (e: Exception) {
                 // Handle errors gracefully
                 Log.e("SatellitePath", "Error generating path for NORAD ID $noradId: ${e.message}")

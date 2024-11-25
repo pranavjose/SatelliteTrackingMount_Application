@@ -15,6 +15,7 @@ import org.orekit.utils.PVCoordinates
 import java.time.Instant
 import java.util.Date
 import org.hipparchus.util.FastMath
+import java.lang.Math.abs
 
 class SatellitePropagator {
 
@@ -86,22 +87,50 @@ class SatellitePropagator {
             startDate: AbsoluteDate,
             duration: Double,
             stepSize: Double
-        ): List<GeodeticPoint> {
+        ): List<Pair<Double,Double>> {
             val tle = TLE(tleLine1, tleLine2)
             val propagator = TLEPropagator.selectExtrapolator(tle)
 
-            val geodeticPoints = mutableListOf<GeodeticPoint>()
+            val latLonPoints = mutableListOf<Pair<Double,Double>>()
+            //val geodeticPoints = mutableListOf<GeodeticPoint>()
             val endDate = startDate.shiftedBy(duration)
             var currentDate = startDate
 
             while (currentDate.compareTo(endDate) <= 0) {
                 val pvCoordinates = propagator.getPVCoordinates(currentDate, earthShape.bodyFrame)
                 val geodeticPoint = earthShape.transform(pvCoordinates.position, earthShape.bodyFrame, currentDate)
-                geodeticPoints.add(geodeticPoint)
+                //geodeticPoints.add(geodeticPoint)
+
+                val latDegrees = Math.toDegrees(geodeticPoint.latitude)
+                val lonDegrees = Math.toDegrees(geodeticPoint.longitude)
+
+                val adjustedLongitude = if (lonDegrees < -180) lonDegrees + 360 else if (lonDegrees > 180) lonDegrees - 360 else lonDegrees
+                val adjustedLatitude = latDegrees.coerceIn(-90.0, 90.0)
+
+
+                // Skip points very close to the poles to avoid artifacts
+                if (adjustedLatitude > 89.5 || adjustedLatitude < -89.5) {
+                    currentDate = currentDate.shiftedBy(stepSize)
+                    continue
+                }
+
+                // Avoid duplicate points
+                if (latLonPoints.isNotEmpty()) {
+                    val (prevLat, prevLon) = latLonPoints.last()
+                    if (kotlin.math.abs(prevLat - adjustedLatitude) < 0.01 && kotlin.math.abs(
+                            prevLon - adjustedLongitude
+                        ) < 0.01) {
+                        currentDate = currentDate.shiftedBy(stepSize)
+                        continue
+                    }
+                }
+
+                latLonPoints.add(Pair(adjustedLatitude, adjustedLongitude))
                 currentDate = currentDate.shiftedBy(stepSize)
             }
 
-            return geodeticPoints
+            //return geodeticPoints
+            return latLonPoints
         }
     }
 }
