@@ -34,12 +34,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
     buildFeatures{
         compose = true //Enable compose
     }
     composeOptions{
         kotlinCompilerExtensionVersion = "1.5.2"
     }
+
 }
 
 dependencies {
@@ -49,6 +51,7 @@ dependencies {
     implementation("com.google.android.material:material:1.8.0")
 
     //Jetpack Compose Dependencies
+
     implementation(platform("androidx.compose:compose-bom:2023.09.01")) // BOM for consistent versions
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.runtime:runtime")
@@ -57,6 +60,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.activity:activity-compose:1.7.0")
+
 
     //Room dependencies for database setup
     implementation("androidx.room:room-runtime:2.6.1")
@@ -73,6 +77,7 @@ dependencies {
 
     implementation("org.orekit:orekit:12.2") //orekit library
 
+
     implementation("com.mapbox.maps:android:11.7.2")
     // If you're using compose also add the compose extension
     implementation("com.mapbox.extension:maps-compose:11.7.2")
@@ -80,5 +85,15 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.6.0-alpha01")
 
 
-
+    //fuck osmdroid trying Mapforge
+//    implementation("org.mapsforge:mapsforge-map-android:0.22.0")
+//    implementation("org.mapsforge:mapsforge-map:0.22.0")
+//    implementation("com.github.mapsforge:mapsforge:Tag")
+    implementation ("com.github.mapsforge.mapsforge:mapsforge-poi-android:0.12.0")
+    implementation ("com.caverock:androidsvg:1.4")
+    implementation ("com.github.mapsforge.mapsforge:mapsforge-core:0.12.0")
+    implementation ("com.github.mapsforge.mapsforge:mapsforge-map:0.12.0")
+    implementation ("com.github.mapsforge.mapsforge:mapsforge-map-reader:0.12.0")
+    implementation ("com.github.mapsforge.mapsforge:mapsforge-themes:0.12.0")
+    implementation("com.github.mapsforge.mapsforge:mapsforge-map-android:0.12.0") // Replace the 'org.mapsforge' version
 }

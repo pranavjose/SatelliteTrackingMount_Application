@@ -9,9 +9,11 @@ import org.orekit.frames.FramesFactory
 import org.orekit.frames.TopocentricFrame
 import org.orekit.utils.Constants
 import org.orekit.utils.IERSConventions
+
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 class UserLocationManager(private val context: Context) {
+
 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)

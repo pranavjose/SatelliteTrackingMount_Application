@@ -1,14 +1,13 @@
 package com.pranavj.satellitetrackingmount.repository
 
 import android.content.Context
+import android.util.Log
 import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.model.SatelliteDao
 import com.pranavj.satellitetrackingmount.model.SatelliteDatabase
-import com.pranavj.satellitetrackingmount.model.SatelliteDao.TLELines
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.orekit.propagation.analytical.tle.TLE
-import android.util.Log
 
 
 
@@ -29,6 +28,10 @@ class SatelliteRepository(private val context: Context) {
         val tleLines = readTLEFile(context)
         return parseTLEFile(tleLines)
     }
+    suspend fun getAllSatellites(): List<Satellite> {
+        return satelliteDao.getAllSatellites() // This uses the existing private satelliteDao
+    }
+
 
     suspend fun getTLEObjects(): List<TLE> = withContext(Dispatchers.IO) {
         val tleLinesList = satelliteDao.getAllTLELines() // Fetch only line1 and line2

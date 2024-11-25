@@ -1,5 +1,6 @@
 package com.pranavj.satellitetrackingmount
 
+
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -59,12 +60,19 @@ import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManag
 import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
 import kotlinx.coroutines.launch
 
+
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
 
+    private lateinit var mapView: MapView
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
+
 
         setContent {
             RequestLocationPermission(
@@ -222,7 +230,33 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
                     polylineAnnotationManager.create(polylineOptions)
                     Log.d("MapScreen", "Plotted satellite path with ${satellitePath.size} points.")
                 }
+
             }
+
+            // Create a MapFile using the temporary file
+            val mapFile = MapFile(tempFile)
+
+            // Create a TileRendererLayer to display the map
+            val tileRendererLayer = TileRendererLayer(
+                tileCache,
+                mapFile,
+                mapView.model.mapViewPosition,
+                AndroidGraphicFactory.INSTANCE
+            ).apply {
+                setXmlRenderTheme(org.mapsforge.map.rendertheme.InternalRenderTheme.DEFAULT)
+            }
+
+            // Add the TileRendererLayer to the MapView
+            mapView.layerManager.layers.add(tileRendererLayer)
+
+            // Set initial map position and zoom level
+            mapView.model.mapViewPosition.mapPosition = MapPosition(LatLong(0.0, 0.0), 2)
+
+
+
+        } catch (e: Exception) {
+            // Handle the exception
+            e.printStackTrace()
         }
     }
 }
@@ -240,6 +274,7 @@ fun RequestLocationPermission(onPermissionGranted: @Composable () -> Unit, onPer
         }
     )
 
+
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -256,6 +291,7 @@ fun RequestLocationPermission(onPermissionGranted: @Composable () -> Unit, onPer
         onPermissionGranted()
     } else {
         onPermissionDenied()
+
     }
 }
 
