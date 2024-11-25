@@ -18,6 +18,9 @@ class SatelliteRepository(private val context: Context) {
         SatelliteDatabase.getDatabase(context).satelliteDao()
     }
 
+    suspend fun getSatelliteByNoradId(noradId: Int): Satellite {
+        return satelliteDao.getSatelliteByNoradId(noradId)
+    }
     suspend fun getAllSatellites(): List<Satellite> {
         return satelliteDao.getAllSatellites()
     }

@@ -47,7 +47,15 @@ import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import android.Manifest
+import androidx.compose.material.Button
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -59,7 +67,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             RequestLocationPermission(
                 onPermissionGranted = {
-                    MainContent(mainViewModel)
+
+                      AppContent(mainViewModel)
+
                 },
                 onPermissionDenied = {
                     NoPermissionContent()
@@ -79,6 +89,31 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@Composable
+fun AppContent(mainViewModel: MainViewModel) {
+    // Observe database and user location readiness
+    val databaseReady by mainViewModel.databaseReady.collectAsState()
+    val userLocationReady by mainViewModel.userTopocentricFrame.collectAsState()
+
+    if (!databaseReady || userLocationReady == null) {
+        // Show a global loading indicator
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Text(
+                    text = "Initializing app...",
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+        }
+    } else {
+        // Load the navigation graph once everything is ready
+        NavigationGraph(mainViewModel)
+    }
+}
 
 @Composable
 fun MainContent(mainViewModel: MainViewModel) {
@@ -128,7 +163,7 @@ fun MapScreen(userLongitude: Double, userLatitude: Double) {
             mapOptions = MapOptions.Builder().build(), // Basic MapOptions setup
             cameraOptions = CameraOptions.Builder()
                 .center(Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)) // Longitude, Latitude
-                .zoom(10.0) // Default zoom level
+                .zoom(6.0) // Default zoom level
                 .build(),
             styleUri = Style.MAPBOX_STREETS // Set the default style
 
@@ -149,7 +184,7 @@ fun MapScreen(userLongitude: Double, userLatitude: Double) {
         mapboxMap.setCamera(
             CameraOptions.Builder()
                 .center(Point.fromLngLat(longitudeInDegrees,latitudeInDegrees))
-                .zoom(10.0)
+                .zoom(6.0)
                 .build()
         )
         mapboxMap.subscribeStyleLoaded { _ ->
@@ -157,7 +192,7 @@ fun MapScreen(userLongitude: Double, userLatitude: Double) {
             mapboxMap.getStyle { style ->
                 // Load the marker icon from drawable and scale it
                 val markerBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.marker_icon)
-                val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 192, 192, false) // Adjust size as needed
+                val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false) // Adjust size as needed
                 style.addImage("marker-icon", scaledBitmap)
             }
             val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
@@ -205,3 +240,65 @@ fun RequestLocationPermission(onPermissionGranted: @Composable () -> Unit, onPer
         onPermissionDenied()
     }
 }
+
+@Composable
+fun NavigationGraph(mainViewModel: MainViewModel) {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "map_screen") {
+        composable("map_screen") {
+            MapScreenWithNavigation(navController, mainViewModel)
+        }
+        composable("satellite_list") {
+            SatelliteListPage(mainViewModel, navController)
+        }
+    }
+}
+
+@Composable
+fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: MainViewModel) {
+    // Observe the user's location from the ViewModel
+    val userTopocentricFrame by mainViewModel.userTopocentricFrame.collectAsState()
+    var isLoading by remember { mutableStateOf(true) }
+
+    // Simulate a loading delay if necessary
+    LaunchedEffect(userTopocentricFrame) {
+        if (userTopocentricFrame == null) {
+            isLoading = true
+        } else {
+            // Introduce a slight delay for smoother transition (optional)
+            kotlinx.coroutines.delay(300)
+            isLoading = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isLoading) {
+            // Show a loading indicator while waiting for the user's location
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (userTopocentricFrame != null) {
+            // Render the map only after the user's location is available
+            MapScreen(
+                userLongitude = userTopocentricFrame!!.point.longitude,
+                userLatitude = userTopocentricFrame!!.point.latitude
+            )
+        }
+
+        // Add a button to navigate to the Satellite List Page
+        Button(
+            onClick = { navController.navigate("satellite_list") },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+        ) {
+            Text("View Satellite List")
+        }
+    }
+}
+
+
