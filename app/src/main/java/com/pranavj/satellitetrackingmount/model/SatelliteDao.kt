@@ -24,4 +24,8 @@ interface SatelliteDao {
     suspend fun getAllTLELines(): List<TLELines>
     // Data class to hold line1 and line2
     data class TLELines(val line1: String, val line2: String)
+
+    // Fetch a satellite by Norad Catalog Number
+    @Query("SELECT * FROM satellites WHERE noradCatalogNumber = :noradId LIMIT 1")
+    suspend fun getSatelliteByNoradId(noradId: Int): Satellite
 }

@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.pranavj.satellitetrackingmount"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -34,12 +34,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-//    buildFeatures{
-//        compose = true //Enable compose
-//    }
-//    composeOptions{
-//        kotlinCompilerExtensionVersion = "1.5.0"
-//    }
+
+    buildFeatures{
+        compose = true //Enable compose
+    }
+    composeOptions{
+        kotlinCompilerExtensionVersion = "1.5.2"
+    }
+
 }
 
 dependencies {
@@ -49,13 +51,15 @@ dependencies {
     implementation("com.google.android.material:material:1.8.0")
 
     //Jetpack Compose Dependencies
-//    implementation(platform("androidx.compose:compose-bom:2023.03.00")) // BOM for consistent versions
-//    implementation("androidx.compose.ui:ui:1.5.0")
-//    implementation("androidx.compose.material:material:1.5.0")
-//    implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
-//    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-//    implementation("androidx.activity:activity-compose:1.7.2")
-//    implementation("androidx.compose.runtime:runtime-livedata:1.5.0")
+
+    implementation(platform("androidx.compose:compose-bom:2023.09.01")) // BOM for consistent versions
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.activity:activity-compose:1.7.0")
 
 
     //Room dependencies for database setup
@@ -73,12 +77,13 @@ dependencies {
 
     implementation("org.orekit:orekit:12.2") //orekit library
 
-//    implementation("com.mapbox.maps:android:11.7.2")
-//    // If you're using compose also add the compose extension
-//    implementation("com.mapbox.extension:maps-compose:11.7.2")
-//
-//    //fuck mapbox trying OSMDroid
-//    implementation("org.osmdroid:osmdroid-android:6.1.20")
+
+    implementation("com.mapbox.maps:android:11.7.2")
+    // If you're using compose also add the compose extension
+    implementation("com.mapbox.extension:maps-compose:11.7.2")
+
+    implementation("androidx.navigation:navigation-compose:2.6.0-alpha01")
+
 
     //fuck osmdroid trying Mapforge
 //    implementation("org.mapsforge:mapsforge-map-android:0.22.0")

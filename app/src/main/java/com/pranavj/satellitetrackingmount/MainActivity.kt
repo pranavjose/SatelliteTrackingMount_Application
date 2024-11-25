@@ -1,31 +1,69 @@
 package com.pranavj.satellitetrackingmount
 
-//import org.mapsforge.map.view.MapView
-import android.content.Intent
+
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
-import androidx.appcompat.app.AppCompatActivity
-import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
-import com.pranavj.satellitetrackingmount.ui.SatelliteListActivity
-import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
-import com.pranavj.satellitetrackingmount.utils.UserLocationManager
-import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
-import org.mapsforge.core.model.LatLong
-import org.mapsforge.core.model.MapPosition
-import org.mapsforge.map.android.graphics.AndroidGraphicFactory
-import org.mapsforge.map.android.util.AndroidUtil
-import org.mapsforge.map.android.view.MapView
-import org.mapsforge.map.layer.cache.TileCache
-import org.mapsforge.map.layer.renderer.TileRendererLayer
-import org.mapsforge.map.reader.MapFile
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
-import kotlinx.coroutines.launch
+//import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+//import androidx.lifecycle.lifecycleScope
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapInitOptions
+import com.mapbox.maps.MapView
+import com.mapbox.maps.Style
+import com.mapbox.maps.MapOptions
+//import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
+//import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
+//import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
+//import com.pranavj.satellitetrackingmount.utils.UserLocationManager
+//import kotlinx.coroutines.launch
+import com.pranavj.satellitetrackingmount.viewmodel.MainViewModel
+import com.mapbox.maps.plugin.annotation.annotations
+//import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import android.Manifest
+import androidx.compose.material.Button
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
+import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
+import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
+
+class MainActivity : ComponentActivity() {
+
+    private val mainViewModel: MainViewModel by viewModels()
 
     private lateinit var mapView: MapView
 
@@ -34,65 +72,165 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        // Initialize Orekit
-        OrekitInitializer.initializeOrekit(this)
 
-        // Create an instance of the SatelliteRepository
-        val satelliteRepository = SatelliteRepository(this)
-        val satellitePropagator = SatellitePropagator()
-        // Create an instance of UserLocationManager
-        val userLocationManager = UserLocationManager()
+        setContent {
+            RequestLocationPermission(
+                onPermissionGranted = {
 
-        // Create the user's location TopocentricFrame
-        val userTopocentricFrame = userLocationManager.createUserLocation()
+                      AppContent(mainViewModel)
 
-        // Insert data into the database (for testing purposes)
-        lifecycleScope.launch {
-            val satellites = satelliteRepository.getSatellitesFromTLE() // Fetches satellite data (assuming this is implemented)
-            satelliteRepository.insertSatellites(satellites) // Insert the data
-            Log.d("MainActivity", "Inserted ${satellites.size} satellites.")
+                },
+                onPermissionDenied = {
+                    NoPermissionContent()
+                }
+            )
         }
+    }
 
-        // Log the details to verify the function works as intended
-        Log.d("UserLocationTest", "User Topocentric Frame created: ${userTopocentricFrame.name}")
+    @Composable
+    fun NoPermissionContent() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Permission is required to access your location.")
+        }
+    }
+}
 
-        // Initialize the AndroidGraphicFactory
-        AndroidGraphicFactory.createInstance(application)
+@Composable
+fun AppContent(mainViewModel: MainViewModel) {
+    // Observe database and user location readiness
+    val databaseReady by mainViewModel.databaseReady.collectAsState()
+    val userLocationReady by mainViewModel.userTopocentricFrame.collectAsState()
 
+    if (!databaseReady || userLocationReady == null) {
+        // Show a global loading indicator
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Text(
+                    text = "Initializing app...",
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+        }
+    } else {
+        // Load the navigation graph once everything is ready
+        NavigationGraph(mainViewModel)
+    }
+}
 
-        // Initialize mapView from the layout
-        mapView = findViewById(R.id.mapView)
-
-        // Configure the MapView
-        mapView.mapScaleBar.isVisible = true
-        mapView.setBuiltInZoomControls(true)
-
-        // Create and configure the MapView
-//        mapView = MapView(this).also {
-//            it.mapScaleBar.isVisible = true
-//            it.setBuiltInZoomControls(true)
+//@Composable
+//fun MainContent(mainViewModel: MainViewModel) {
+//    // Collect the userTopocentricFrame as state
+//    val userTopocentricFrameState = mainViewModel.userTopocentricFrame.collectAsState()
+//    // Get the current value
+//    val userTopocentricFrame = userTopocentricFrameState.value
+//
+//    if (userTopocentricFrame != null) {
+//        // Safely use the frame
+//        MapScreen(
+//            userLongitude = userTopocentricFrame.point.longitude,
+//            userLatitude = userTopocentricFrame.point.latitude
+//        )
+//    } else {
+//        // Show a loading indicator while the user's location is being determined
+//        Box(
+//            modifier = Modifier.fillMaxSize(),
+//            contentAlignment = Alignment.Center
+//        ) {
+//            Column(
+//                horizontalAlignment = Alignment.CenterHorizontally
+//            ) {
+//                CircularProgressIndicator()
+//                Text(text = "Loading user location...", modifier = Modifier.padding(top = 16.dp))
+//            }
 //        }
+//    }
+//}
 
-        // Set the MapView as the content view
-//        setContentView(mapView)
 
-        // In your onCreate() method or wherever needed
-        val tileCache: TileCache = AndroidUtil.createTileCache(
-            this,
-            "mapcache",
-            mapView.model.displayModel.tileSize,
-            1f,
-            mapView.model.frameBufferModel.overdrawFactor
+@Composable
+fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainViewModel) {
+    val satellitePath by mainViewModel.satellitePath.collectAsState()
+    // Retrieve context in a composable-safe way
+    val context = LocalContext.current
+    // Convert radians to degrees for Mapbox
+    val longitudeInDegrees = Math.toDegrees(userLongitude)
+    val latitudeInDegrees = Math.toDegrees(userLatitude)
+    //Log.d("MapScreen", "Longitude (radians): $userLongitude, Latitude (radians): $userLatitude")
+    Log.d("MapScreen", "Final values: Longitude (degrees): $longitudeInDegrees, Latitude (degrees): $latitudeInDegrees")
+
+
+    // Configure MapInitOptions
+    val mapInitOptions = remember {
+        MapInitOptions(
+            context = context,
+            mapOptions = MapOptions.Builder().build(), // Basic MapOptions setup
+            cameraOptions = CameraOptions.Builder()
+                .center(Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)) // Longitude, Latitude
+                .zoom(6.0) // Default zoom level
+                .build(),
+            styleUri = Style.MAPBOX_STREETS // Set the default style
+
         )
+    }
 
-        try {
-            // Load the .map file from the assets folder and copy it to a temporary file
-            val inputStream: InputStream = assets.open("mapsforge/world.map")
-            val tempFile = File.createTempFile("world", ".map", cacheDir)
-            FileOutputStream(tempFile).use { outputStream ->
-                inputStream.copyTo(outputStream)
+    // Initialize MapView
+    val mapView = remember { MapView(context, mapInitOptions) }
+
+    // Display the MapView in Compose
+    AndroidView(
+        factory = { mapView },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Use the new `subscribeStyleLoaded` method
+        val mapboxMap = mapView.mapboxMap
+
+        mapboxMap.setCamera(
+            CameraOptions.Builder()
+                .center(Point.fromLngLat(longitudeInDegrees,latitudeInDegrees))
+                .zoom(6.0)
+                .build()
+        )
+        mapboxMap.subscribeStyleLoaded { _ ->
+            mapboxMap.getStyle { style ->
+                val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+                pointAnnotationManager.deleteAll()
+                // Add user location marker
+                val userLocationPoint = Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)
+                // Load and scale marker icon for the user's location
+                val markerBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.marker_icon)
+                val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false)
+                style.addImage("marker-icon", scaledBitmap)
+
+                val userMarker = PointAnnotationOptions()
+                    .withPoint(userLocationPoint)
+                    .withIconImage("marker-icon")
+                pointAnnotationManager.create(userMarker)
+
+                // Plot the satellite path if available
+                if (satellitePath.isNotEmpty()) {
+                    val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
+                    polylineAnnotationManager.deleteAll()//clear old polylines
+                    // Add a debug log for each latitude and longitude point
+                    satellitePath.forEach { (lat, lon) ->
+                        Log.d("SatellitePathPlot", "Latitude: $lat, Longitude: $lon")
+                    }
+
+                    val polylineOptions = PolylineAnnotationOptions()
+                        .withPoints(satellitePath.map { (lat, lon) -> Point.fromLngLat(lon, lat) }) // Destructure Pair
+                        .withLineWidth(4.0)
+                        .withLineColor("#FF0000") // Example color: red
+                    polylineAnnotationManager.create(polylineOptions)
+                    Log.d("MapScreen", "Plotted satellite path with ${satellitePath.size} points.")
+                }
+
             }
 
             // Create a MapFile using the temporary file
@@ -120,18 +258,102 @@ class MainActivity : AppCompatActivity() {
             // Handle the exception
             e.printStackTrace()
         }
+    }
+}
 
-        // Button to navigate to SatelliteListActivity
-        val btnViewSatellites: Button = findViewById(R.id.btnViewSatellites)
-        btnViewSatellites.setOnClickListener {
-            val intent = Intent(this, SatelliteListActivity::class.java)
-            startActivity(intent)
+
+@Composable
+fun RequestLocationPermission(onPermissionGranted: @Composable () -> Unit, onPermissionDenied: @Composable () -> Unit) {
+    val context = LocalContext.current
+    var permissionGranted by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            permissionGranted = granted
+        }
+    )
+
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionGranted = true
+        } else {
+            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        mapView.destroyAll() // Clean up MapView resources
-        AndroidGraphicFactory.clearResourceMemoryCache() // Clear resource cache for graphics
+    if (permissionGranted) {
+        onPermissionGranted()
+    } else {
+        onPermissionDenied()
+
     }
 }
+
+@Composable
+fun NavigationGraph(mainViewModel: MainViewModel) {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "map_screen") {
+        composable("map_screen") {
+            MapScreenWithNavigation(navController, mainViewModel)
+        }
+        composable("satellite_list") {
+            SatelliteListPage(mainViewModel, navController)
+        }
+    }
+}
+
+@Composable
+fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: MainViewModel) {
+    // Observe the user's location from the ViewModel
+    val userTopocentricFrame by mainViewModel.userTopocentricFrame.collectAsState()
+    var isLoading by remember { mutableStateOf(true) }
+
+    // Simulate a loading delay if necessary
+    LaunchedEffect(userTopocentricFrame) {
+        if (userTopocentricFrame == null) {
+            isLoading = true
+        } else {
+            // Introduce a slight delay for smoother transition (optional)
+            kotlinx.coroutines.delay(300)
+            isLoading = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isLoading) {
+            // Show a loading indicator while waiting for the user's location
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (userTopocentricFrame != null) {
+            // Render the map only after the user's location is available
+            MapScreen(
+                userLongitude = userTopocentricFrame!!.point.longitude,
+                userLatitude = userTopocentricFrame!!.point.latitude,
+                mainViewModel = mainViewModel
+            )
+        }
+
+        // Add a button to navigate to the Satellite List Page
+        Button(
+            onClick = { navController.navigate("satellite_list") },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+        ) {
+            Text("View Satellite List")
+        }
+    }
+}
+
+
