@@ -2,8 +2,13 @@ package com.pranavj.satellitetrackingmount.viewmodel
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.mapbox.geojson.Point
+import com.pranavj.satellitetrackingmount.model.PathMetadata
 import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
 import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
@@ -36,6 +41,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private val userLocationManager = UserLocationManager(application.applicationContext)
+
+    private val pathColors = listOf(
+        Color.Red,
+        Color.Blue,
+        Color.Green,
+        Color.Cyan,
+        Color.Magenta,
+        Color.Yellow
+    )
+
+    //private val _satellitePaths = MutableLiveData<Map<Satellite, PathMetadata>>()
+    //val satellitePaths: LiveData<Map<Satellite, PathMetadata>> = _satellitePaths
+    private var colorIndex = 0
+
+    private fun getNextColor(): Int {
+        val color = pathColors[colorIndex]
+        colorIndex = (colorIndex + 1) % pathColors.size // Cycle through the colors
+        return android.graphics.Color.argb(
+            (color.alpha * 255).toInt(),
+            (color.red * 255).toInt(),
+            (color.green * 255).toInt(),
+            (color.blue * 255).toInt()
+        )
+    }
+
+
+
+
     init {
         // Initialize Orekit
         OrekitInitializer.initializeOrekit(application)
@@ -43,9 +76,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         fetchAndInsertSatellites()
     }
 
+    fun clearAllPaths() {
+        _satellitePaths.value = emptyMap() // Clear all paths
+
+    }
+
     /**
      * Fetches satellites from TLE and inserts them into the database.
      */
+
     private fun fetchAndInsertSatellites(onComplete: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -85,13 +124,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    private val _satellitePath = MutableStateFlow<List<Pair<Double,Double>>>(emptyList())
-    val satellitePath = _satellitePath.asStateFlow()
+    //private val _satellitePath = MutableStateFlow<List<Pair<Double,Double>>>(emptyList())
+    //val satellitePath = _satellitePath.asStateFlow()
+
+    private val _satellitePaths = MutableStateFlow<Map<Satellite, PathMetadata>>(emptyMap())
+    val satellitePaths = _satellitePaths.asStateFlow()
+
     fun plotSatellitePath(noradId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 //clear old path
-                _satellitePath.value = emptyList()
+                //_satellitePath.value = emptyList()
+
                 // Fetch satellite by NORAD ID
                 val satellite = satelliteRepository.getSatelliteByNoradId(noradId)
 
@@ -101,17 +145,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     satellite.line2,
                     startDate = SatellitePropagator.getCurrentStartDate(),
                     duration = 5400.0, // Fixed duration for now
-                    stepSize = 30.0  // Fixed step size for now
+                    stepSize = 60.0  // Fixed step size for now
                 )
                 if (latLonPath.isEmpty()) {
                     Log.e("SatellitePath", "Generated path is empty for NORAD ID $noradId.")
+                    return@launch
                 } else {
                     Log.d("SatellitePath", "Path for ${satellite.name} generated with ${latLonPath.size} points.")
                 }
 
+                val pathPoints = latLonPath.map{ (lat, lon) -> Point.fromLngLat(lon, lat)}
+
+                val color = getNextColor()
+
+                val pathMetadata = PathMetadata(
+                    pathPoints = pathPoints,
+                    color = color,
+                    startMarker = pathPoints.first(),
+                    stopMarker = pathPoints.last()
+                )
+
                 // Emit the new path on the Main dispatcher
                 launch(Dispatchers.Main) {
-                    _satellitePath.value = latLonPath
+//                    _satellitePath.value = latLonPath
+                    val currentPaths = _satellitePaths.value.toMutableMap()
+                    currentPaths[satellite] = pathMetadata
+                    _satellitePaths.value = currentPaths
                 }
             } catch (e: Exception) {
                 // Handle errors gracefully

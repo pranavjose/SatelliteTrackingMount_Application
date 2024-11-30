@@ -47,8 +47,13 @@ import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import android.Manifest
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.Button
+import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -56,6 +61,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
+import com.pranavj.satellitetrackingmount.model.PathMetadata
+import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
 import kotlinx.coroutines.launch
 
@@ -149,7 +156,7 @@ fun AppContent(mainViewModel: MainViewModel) {
 
 @Composable
 fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainViewModel) {
-    val satellitePath by mainViewModel.satellitePath.collectAsState()
+    val satellitePaths by mainViewModel.satellitePaths.collectAsState()
     // Retrieve context in a composable-safe way
     val context = LocalContext.current
     // Convert radians to degrees for Mapbox
@@ -175,6 +182,8 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
 
     // Initialize MapView
     val mapView = remember { MapView(context, mapInitOptions) }
+    val pointAnnotationManager = remember {mapView.annotations.createPointAnnotationManager()}
+    val polylineAnnotationManager = remember {mapView.annotations.createPolylineAnnotationManager()}
 
     // Display the MapView in Compose
     AndroidView(
@@ -192,8 +201,10 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
         )
         mapboxMap.subscribeStyleLoaded { _ ->
             mapboxMap.getStyle { style ->
-                val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+//                val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+//                val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
                 pointAnnotationManager.deleteAll()
+                polylineAnnotationManager.deleteAll()
                 // Add user location marker
                 val userLocationPoint = Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)
                 // Load and scale marker icon for the user's location
@@ -206,25 +217,53 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
                     .withIconImage("marker-icon")
                 pointAnnotationManager.create(userMarker)
 
-                // Plot the satellite path if available
-                if (satellitePath.isNotEmpty()) {
-                    val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
-                    polylineAnnotationManager.deleteAll()//clear old polylines
-                    // Add a debug log for each latitude and longitude point
-                    satellitePath.forEach { (lat, lon) ->
-                        Log.d("SatellitePathPlot", "Latitude: $lat, Longitude: $lon")
-                    }
 
+                satellitePaths.forEach { (_, metadata) ->
+                    // Plot each path
                     val polylineOptions = PolylineAnnotationOptions()
-                        .withPoints(satellitePath.map { (lat, lon) -> Point.fromLngLat(lon, lat) }) // Destructure Pair
+                        .withPoints(metadata.pathPoints)
                         .withLineWidth(4.0)
-                        .withLineColor("#FF0000") // Example color: red
+                        .withLineColor(metadata.color)
                     polylineAnnotationManager.create(polylineOptions)
-                    Log.d("MapScreen", "Plotted satellite path with ${satellitePath.size} points.")
+
+                    // Optionally add start and stop markers
+                    addMarker(mapView, metadata.startMarker, "Start")
+                    addMarker(mapView, metadata.stopMarker, "Stop")
                 }
+                // Plot the satellite path if available
+//                if (satellitePath.isNotEmpty()) {
+//                    val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
+//                    polylineAnnotationManager.deleteAll()//clear old polylines
+//                    // Add a debug log for each latitude and longitude point
+//                    satellitePath.forEach { (lat, lon) ->
+//                        Log.d("SatellitePathPlot", "Latitude: $lat, Longitude: $lon")
+//                    }
+//
+//                    val polylineOptions = PolylineAnnotationOptions()
+//                        .withPoints(satellitePath.map { (lat, lon) -> Point.fromLngLat(lon, lat) }) // Destructure Pair
+//                        .withLineWidth(4.0)
+//                        .withLineColor("#FF0000") // Example color: red
+//                    polylineAnnotationManager.create(polylineOptions)
+//                    Log.d("MapScreen", "Plotted satellite path with ${satellitePath.size} points.")
+//                }
             }
         }
     }
+}
+
+
+private fun addMarker(mapView: MapView, point: Point, title: String) {
+    val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+
+    val markerBitmap = BitmapFactory.decodeResource(mapView.context.resources, R.drawable.marker_icon)
+    val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false)
+    pointAnnotationManager.create(
+        PointAnnotationOptions()
+            .withPoint(point)
+            .withIconImage(scaledBitmap)
+            .withTextField(title)
+            .withTextOffset(listOf(0.0, 1.0))
+    )
 }
 
 
@@ -308,6 +347,11 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
             )
         }
 
+        // Overlay the legend
+        SatelliteLegendDropdown(
+            satellitePaths = mainViewModel.satellitePaths.collectAsState().value
+        )
+
         // Add a button to navigate to the Satellite List Page
         Button(
             onClick = { navController.navigate("satellite_list") },
@@ -317,7 +361,56 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
         ) {
             Text("View Satellite List")
         }
+        Button(
+            onClick = { mainViewModel.clearAllPaths() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Text("Clear All")
+        }
+
     }
 }
+
+@Composable
+fun SatelliteLegendDropdown(
+    satellitePaths: Map<Satellite, PathMetadata>
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        // Dropdown toggle button
+        Button(onClick = { expanded = !expanded }) {
+            Text(if (expanded) "Hide Legend" else "Show Legend")
+        }
+
+        // Conditionally show the legend items
+        if (expanded) {
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                Text("Currently Plotted Satellites", style = MaterialTheme.typography.h6)
+                satellitePaths.forEach { (satellite, metadata) ->
+                    Row(
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(Color(metadata.color))
+                        )
+                        Text(
+                            text = satellite.name,
+                            modifier = Modifier.padding(start = 8.dp),
+                            style = MaterialTheme.typography.body1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
 
 
