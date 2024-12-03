@@ -11,6 +11,7 @@ import com.mapbox.geojson.Point
 import com.pranavj.satellitetrackingmount.model.PathMetadata
 import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
+import com.pranavj.satellitetrackingmount.utils.AppLogger
 import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
 import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
 import com.pranavj.satellitetrackingmount.utils.UserLocationManager
@@ -104,7 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val fetchedSatellites = satelliteRepository.getSatellitesFromTLE()
                 satelliteRepository.insertSatellites(fetchedSatellites)
                 Log.d("DatabaseTest", "Inserted ${fetchedSatellites.size} satellites.")
-
+                AppLogger.log("DatabaseTest", "Inserted ${fetchedSatellites.size} satellites.")
                 delay(1000) // Debugging delay (1 second)
                 // Fetch satellites after insertion
                 val allSatellites = satelliteRepository.getAllSatellites()
@@ -112,8 +113,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _satellites.value = allSatellites
 
                 Log.d("SatelliteLog", "Fetched ${allSatellites.size} satellites.")
+                AppLogger.log("SatelliteLog", "Fetched ${allSatellites.size} satellites.")
                 allSatellites.forEach { satellite ->
                     Log.d("SatelliteLog", "ID: ${satellite.id}, Name: ${satellite.name}")
+                    //AppLogger.log("SatelliteLog", "ID: ${satellite.id}, Name: ${satellite.name}")
                 }
 
                 // Trigger database readiness
@@ -123,6 +126,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 // Handle exceptions (e.g., logging, notifying the user)
                 Log.e("DatabaseTest", "Error during satellite fetch/insert: ${e.message}")
+                AppLogger.log("DatabaseTest", "Error during satellite fetch/insert: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -162,9 +166,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 if (latLonPath.isEmpty()) {
                     Log.e("SatellitePath", "Generated path is empty for NORAD ID $noradId.")
+                    AppLogger.log("SatellitePath", "Generated path is empty for NORAD ID $noradId.")
                     return@launch
                 } else {
                     Log.d("SatellitePath", "Path for ${satellite.name} generated with ${latLonPath.size} points.")
+                    AppLogger.log("SatellitePath", "Path for ${satellite.name} generated with ${latLonPath.size} points.")
                 }
 
                 val pathPoints = latLonPath.map{ (lat, lon) -> Point.fromLngLat(lon, lat)}
@@ -188,6 +194,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 // Handle errors gracefully
                 Log.e("SatellitePath", "Error generating path for NORAD ID $noradId: ${e.message}")
+                AppLogger.log("SatellitePath", "Error generating path for NORAD ID $noradId: ${e.message}")
             }
         }
     }
@@ -213,9 +220,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Log the result (placeholder for now)
                 Log.d("SatelliteAzEl", "Azimuth/Elevation Path for ${satellite.name}: $azElPath")
+                AppLogger.log("SatelliteAzEl", "Azimuth/Elevation Path for ${satellite.name}: $azElPath")
+
             } catch (e: Exception) {
                 // Handle errors gracefully
                 Log.e("SatelliteAzEl", "Error generating Az/El data for NORAD ID $noradId: ${e.message}")
+                AppLogger.log("SatelliteAzEl", "Error generating Az/El data for NORAD ID $noradId: ${e.message}")
             }
         }
     }

@@ -25,7 +25,7 @@ class UserLocationManager(private val context: Context) {
                 val altitude = location.altitude
 
                 Log.d("UserLocationManager", "Real Location: lat=${location.latitude}, lon=${location.longitude}, alt=$altitude")
-
+                AppLogger.log("UserLocationManager", "Real Location: lat=${location.latitude}, lon=${location.longitude}, alt=$altitude")
                 // Convert to Orekit's GeodeticPoint and TopocentricFrame
                 val geodeticPoint = GeodeticPoint(latitudeRadians, longitudeRadians, altitude)
                 val earthShape = OneAxisEllipsoid(

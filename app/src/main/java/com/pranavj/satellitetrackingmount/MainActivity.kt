@@ -50,6 +50,8 @@ import android.Manifest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.setValue
@@ -64,6 +66,7 @@ import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManag
 import com.pranavj.satellitetrackingmount.model.PathMetadata
 import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
+import com.pranavj.satellitetrackingmount.utils.AppLogger
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -124,34 +127,7 @@ fun AppContent(mainViewModel: MainViewModel) {
     }
 }
 
-//@Composable
-//fun MainContent(mainViewModel: MainViewModel) {
-//    // Collect the userTopocentricFrame as state
-//    val userTopocentricFrameState = mainViewModel.userTopocentricFrame.collectAsState()
-//    // Get the current value
-//    val userTopocentricFrame = userTopocentricFrameState.value
-//
-//    if (userTopocentricFrame != null) {
-//        // Safely use the frame
-//        MapScreen(
-//            userLongitude = userTopocentricFrame.point.longitude,
-//            userLatitude = userTopocentricFrame.point.latitude
-//        )
-//    } else {
-//        // Show a loading indicator while the user's location is being determined
-//        Box(
-//            modifier = Modifier.fillMaxSize(),
-//            contentAlignment = Alignment.Center
-//        ) {
-//            Column(
-//                horizontalAlignment = Alignment.CenterHorizontally
-//            ) {
-//                CircularProgressIndicator()
-//                Text(text = "Loading user location...", modifier = Modifier.padding(top = 16.dp))
-//            }
-//        }
-//    }
-//}
+
 
 
 @Composable
@@ -165,6 +141,7 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
     val latitudeInDegrees = Math.toDegrees(userLatitude)
     //Log.d("MapScreen", "Longitude (radians): $userLongitude, Latitude (radians): $userLatitude")
     Log.d("MapScreen", "Final values: Longitude (degrees): $longitudeInDegrees, Latitude (degrees): $latitudeInDegrees")
+    //AppLogger.log("MapScreen", "Final values: Longitude (degrees): $longitudeInDegrees, Latitude (degrees): $latitudeInDegrees")
 
 
     // Configure MapInitOptions
@@ -191,6 +168,7 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
     LaunchedEffect(Unit) {
         mainViewModel.clearCommand.collect {
             Log.d("MapScreen", "Received clear command. Clearing annotations.")
+            AppLogger.log("MapScreen", "Received clear command. Clearing annotations.")
             polylineAnnotationManager.deleteAll()
             pointAnnotationManager.deleteAll()
             Log.d("PointAnnotationManager", "Clearing manager: ${pointAnnotationManager.hashCode()}")
@@ -326,6 +304,9 @@ fun NavigationGraph(mainViewModel: MainViewModel) {
         composable("satellite_list") {
             SatelliteListPage(mainViewModel, navController)
         }
+        composable("log_page"){
+            LogPage(navController)
+        }
     }
 }
 
@@ -386,6 +367,15 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
         ) {
             Text("Clear All")
         }
+        // Add a button to navigate to the Log Page
+        Button(
+            onClick = { navController.navigate("log_page") },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+        ) {
+            Text("Log")
+        }
 
     }
 }
@@ -427,6 +417,23 @@ fun SatelliteLegendDropdown(
     }
 }
 
+@Composable
+fun LogPage(navController: NavHostController) {
+    val logs = remember { AppLogger.getLogs() }
+
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        items(logs) { log ->
+            Text(
+                text = log,
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
+    }
+    Button(onClick = { navController.popBackStack() }) {
+        Text("Back")
+    }
+}
 
 
 
