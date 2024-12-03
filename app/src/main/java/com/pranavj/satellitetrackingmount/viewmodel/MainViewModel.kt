@@ -52,6 +52,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _clearCommand = MutableSharedFlow<Unit>()
     val clearCommand = _clearCommand.asSharedFlow()
 
+    private val _duration = MutableStateFlow("5") // Default value as a string
+    val duration: StateFlow<String> = _duration
+
+    private val _stepSize = MutableStateFlow("0.5") // Default value as a string
+    val stepSize: StateFlow<String> = _stepSize
 
     private val pathColors = listOf(
         Color.Red,
@@ -78,7 +83,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
+    fun updateDuration(newDuration: String) {
+        _duration.value = newDuration
+        AppLogger.log("Az/EL Propagation Settings", "New Propagation Duration = $newDuration")
+    }
 
+    fun updateStepSize(newStepSize: String) {
+        _stepSize.value = newStepSize
+        AppLogger.log("Az/EL Propagation Settings", "New Propagation Step Size = $newStepSize")
+    }
 
     init {
         // Initialize Orekit
@@ -213,8 +226,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     satellite.line1,
                     satellite.line2,
                     startDate = SatellitePropagator.getCurrentStartDate(),
-                    durationSeconds = 10.0, // User-defined settings can be added later
-                    stepSeconds = 30.0, // User-defined settings can be added later
+                    durationSeconds = 300.0, // User-defined settings can be added later
+                    stepSeconds = 0.5, // User-defined settings can be added later
                     userTopocentricFrame = userLocation
                 )
 

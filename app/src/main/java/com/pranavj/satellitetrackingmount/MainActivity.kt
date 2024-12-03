@@ -48,12 +48,20 @@ import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import android.Manifest
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
@@ -307,6 +315,9 @@ fun NavigationGraph(mainViewModel: MainViewModel) {
         composable("log_page"){
             LogPage(navController)
         }
+        composable("settings_page"){
+            SettingsPage(navController, mainViewModel)
+        }
     }
 }
 
@@ -377,6 +388,21 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
             Text("Log")
         }
 
+        // Add a button to navigate to the Settings page
+        Button(
+            onClick = { navController.navigate("settings_page") },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Settings,
+                contentDescription = "Settings Icon",
+                tint = MaterialTheme.colors.onPrimary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
     }
 }
 
@@ -421,7 +447,9 @@ fun SatelliteLegendDropdown(
 fun LogPage(navController: NavHostController) {
     val logs = remember { AppLogger.getLogs() }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    LazyColumn(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
         items(logs) { log ->
             Text(
                 text = log,
@@ -432,6 +460,102 @@ fun LogPage(navController: NavHostController) {
     }
     Button(onClick = { navController.popBackStack() }) {
         Text("Back")
+    }
+}
+
+@Composable
+fun SettingsPage( navController: NavHostController,
+                  mainViewModel: MainViewModel,
+    currentTLEFile: String = "amateurRadio.tle", // Placeholder for current TLE file
+//    defaultDuration: String = "5", // Default duration in minutes
+//    defaultStepSize: String = "0.5" // Default step size in seconds
+) {
+//    var duration by remember { mutableStateOf(defaultDuration) }
+//    var stepSize by remember { mutableStateOf(defaultStepSize) }
+//    var duration by rememberSaveable { mutableStateOf("5") }
+//    var stepSize by rememberSaveable { mutableStateOf("0.5") }
+    val duration by mainViewModel.duration.collectAsState() // Observe ViewModel state
+    val stepSize by mainViewModel.stepSize.collectAsState() // Observe ViewModel state
+
+    // State to control the visibility of the dialog
+    var showDialog by remember { mutableStateOf(false) }
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // Import TLE Section
+        Button(onClick = { navController.popBackStack() }) {
+            Text("Back")
+        }
+        Text(
+            text = "TLE Settings",
+            style = MaterialTheme.typography.h6,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Button(onClick = { showDialog = true }) {
+            Text("Import TLE")
+        }
+        Text(
+            text = "Current TLE File: $currentTLEFile",
+            style = MaterialTheme.typography.body1,
+            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+        )
+
+        // Propagation Settings Section
+        Text(
+            text = "Propagation Settings for Az/El Path",
+            style = MaterialTheme.typography.h6,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Duration Input
+        Text(text = "Duration (mins):", style = MaterialTheme.typography.body1)
+        OutlinedTextField(
+            value = duration,
+            onValueChange = { mainViewModel.updateDuration(it) },
+            label = { Text("Duration (mins)") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        )
+
+        // Step Size Input
+        Text(text = "Step Size (secs):", style = MaterialTheme.typography.body1)
+        OutlinedTextField(
+            value = stepSize,
+            onValueChange = { mainViewModel.updateStepSize(it) },
+            label = { Text("Step Size (secs)") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        )
+    }
+    // AlertDialog for Import TLE error
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false }, // Dismiss dialog when background is clicked
+            title = {
+                Text(
+                    text = "Import TLE",
+                    style = MaterialTheme.typography.h6
+                )
+            },
+            
+            text = {
+                Text(
+                    text = "Error getting file permissions",
+                    style = MaterialTheme.typography.body1
+                )
+            },
+            confirmButton = {
+                Button(onClick = { showDialog = false }) { // Dismiss dialog on button click
+                    Text("OK")
+                }
+            }
+        )
     }
 }
 
