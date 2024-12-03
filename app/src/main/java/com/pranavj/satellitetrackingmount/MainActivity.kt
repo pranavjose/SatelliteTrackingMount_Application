@@ -157,6 +157,7 @@ fun AppContent(mainViewModel: MainViewModel) {
 @Composable
 fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainViewModel) {
     val satellitePaths by mainViewModel.satellitePaths.collectAsState()
+    val refreshMap by mainViewModel.refreshMap.collectAsState() //refresh map trigger from clear paths fn
     // Retrieve context in a composable-safe way
     val context = LocalContext.current
     // Convert radians to degrees for Mapbox
@@ -185,6 +186,16 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
     val pointAnnotationManager = remember {mapView.annotations.createPointAnnotationManager()}
     val polylineAnnotationManager = remember {mapView.annotations.createPolylineAnnotationManager()}
 
+
+    // Handle the clear command
+    LaunchedEffect(Unit) {
+        mainViewModel.clearCommand.collect {
+            Log.d("MapScreen", "Received clear command. Clearing annotations.")
+            polylineAnnotationManager.deleteAll()
+            pointAnnotationManager.deleteAll()
+            Log.d("PointAnnotationManager", "Clearing manager: ${pointAnnotationManager.hashCode()}")
+        }
+    }
     // Display the MapView in Compose
     AndroidView(
         factory = { mapView },
@@ -201,21 +212,17 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
         )
         mapboxMap.subscribeStyleLoaded { _ ->
             mapboxMap.getStyle { style ->
-//                val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
-//                val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
-                pointAnnotationManager.deleteAll()
-                polylineAnnotationManager.deleteAll()
                 // Add user location marker
                 val userLocationPoint = Point.fromLngLat(longitudeInDegrees, latitudeInDegrees)
-                // Load and scale marker icon for the user's location
-                val markerBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.marker_icon)
-                val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false)
-                style.addImage("marker-icon", scaledBitmap)
+                // Load and scale marker icon for the satellite's start and stop location
 
-                val userMarker = PointAnnotationOptions()
-                    .withPoint(userLocationPoint)
-                    .withIconImage("marker-icon")
-                pointAnnotationManager.create(userMarker)
+                val satBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.satellite_icon)
+                val scaledBitmapSAT = Bitmap.createScaledBitmap(satBitmap, 144, 144, false)
+
+                style.addImage("satellite_icon", scaledBitmapSAT)
+
+                addMarker(mapView, userLocationPoint, "You")
+
 
 
                 satellitePaths.forEach { (_, metadata) ->
@@ -226,26 +233,29 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
                         .withLineColor(metadata.color)
                     polylineAnnotationManager.create(polylineOptions)
 
-                    // Optionally add start and stop markers
-                    addMarker(mapView, metadata.startMarker, "Start")
-                    addMarker(mapView, metadata.stopMarker, "Stop")
+                    // add start and stop markers
+
+                    pointAnnotationManager.create(PointAnnotationOptions()
+                        .withPoint(metadata.startMarker)
+                        .withIconImage("satellite_icon")
+                        .withTextField("Start")
+                        .withTextSize(30.0)
+                        .withTextOffset(listOf(0.0,3.0))
+                        .withTextHaloColor("#FFFFFF")
+                        .withTextHaloWidth(3.0)
+                    )
+
+                    pointAnnotationManager.create(PointAnnotationOptions()
+                        .withPoint(metadata.stopMarker)
+                        .withIconImage("satellite_icon")
+                        .withTextField("Stop")
+                        .withTextSize(30.0)
+                        .withTextOffset(listOf(0.0,3.0))
+                        .withTextHaloColor("#FFFFFF")
+                        .withTextHaloWidth(3.0)
+                    )
+
                 }
-                // Plot the satellite path if available
-//                if (satellitePath.isNotEmpty()) {
-//                    val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
-//                    polylineAnnotationManager.deleteAll()//clear old polylines
-//                    // Add a debug log for each latitude and longitude point
-//                    satellitePath.forEach { (lat, lon) ->
-//                        Log.d("SatellitePathPlot", "Latitude: $lat, Longitude: $lon")
-//                    }
-//
-//                    val polylineOptions = PolylineAnnotationOptions()
-//                        .withPoints(satellitePath.map { (lat, lon) -> Point.fromLngLat(lon, lat) }) // Destructure Pair
-//                        .withLineWidth(4.0)
-//                        .withLineColor("#FF0000") // Example color: red
-//                    polylineAnnotationManager.create(polylineOptions)
-//                    Log.d("MapScreen", "Plotted satellite path with ${satellitePath.size} points.")
-//                }
             }
         }
     }
@@ -254,15 +264,22 @@ fun MapScreen(userLongitude: Double, userLatitude: Double, mainViewModel: MainVi
 
 private fun addMarker(mapView: MapView, point: Point, title: String) {
     val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+//    Log.d("PointAnnotationManager", "Using manager: ${pointAnnotationManager.hashCode()} for marker: $title")
 
+//    val markerBitmap = BitmapFactory.decodeResource(mapView.context.resources, R.drawable.marker_icon)
+//    val scaledBitmapSAT = Bitmap.createScaledBitmap(markerBitmap, 192, 192, false)
     val markerBitmap = BitmapFactory.decodeResource(mapView.context.resources, R.drawable.marker_icon)
     val scaledBitmap = Bitmap.createScaledBitmap(markerBitmap, 96, 96, false)
+
     pointAnnotationManager.create(
         PointAnnotationOptions()
             .withPoint(point)
             .withIconImage(scaledBitmap)
             .withTextField(title)
-            .withTextOffset(listOf(0.0, 1.0))
+            .withTextSize(30.0)
+            .withTextOffset(listOf(0.0, 2.0))
+            .withTextHaloColor("#FFFFFF")
+            .withTextHaloWidth(3.0)
     )
 }
 

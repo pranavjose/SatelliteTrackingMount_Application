@@ -16,7 +16,10 @@ import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
 import com.pranavj.satellitetrackingmount.utils.UserLocationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.hipparchus.util.FastMath
@@ -41,6 +44,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private val userLocationManager = UserLocationManager(application.applicationContext)
+
+    private val _refreshMap = MutableStateFlow(false)
+    val refreshMap: StateFlow<Boolean> = _refreshMap
+
+    private val _clearCommand = MutableSharedFlow<Unit>()
+    val clearCommand = _clearCommand.asSharedFlow()
+
 
     private val pathColors = listOf(
         Color.Red,
@@ -78,7 +88,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearAllPaths() {
         _satellitePaths.value = emptyMap() // Clear all paths
-
+//        _refreshMap.value = !_refreshMap.value
+        viewModelScope.launch {
+            _clearCommand.emit(Unit) // Emit the clear event
+        }
     }
 
     /**
