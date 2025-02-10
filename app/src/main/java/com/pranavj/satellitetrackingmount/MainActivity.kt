@@ -76,13 +76,39 @@ import com.pranavj.satellitetrackingmount.model.Satellite
 import com.pranavj.satellitetrackingmount.ui.SatelliteListPage
 import com.pranavj.satellitetrackingmount.utils.AppLogger
 import kotlinx.coroutines.launch
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+
 
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
+    private val ACTION_USB_PERMISSION = "com.pranavj.satellitetrackingmount.USB_PERMISSION"
 
+    private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if(intent == null) return
+            if(intent.action == ACTION_USB_PERMISSION) {
+                synchronized(this) {
+                    val device : UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        AppLogger.log("UART", "USB Permission granted for device: $device")
+                    } else{
+                        AppLogger.log("UART", "USB Permission denied!")
+                    }
+                }
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val filter = IntentFilter(ACTION_USB_PERMISSION)
+        registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
 
         setContent {
             RequestLocationPermission(

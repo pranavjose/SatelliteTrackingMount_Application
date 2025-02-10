@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.pranavj.satellitetrackingmount.model.Satellite
+import com.pranavj.satellitetrackingmount.utils.AppLogger
 import com.pranavj.satellitetrackingmount.viewmodel.MainViewModel
 
 @Composable
@@ -31,10 +32,32 @@ fun SatelliteListPage(mainViewModel: MainViewModel, navController: NavHostContro
                 Text("Back")
             }
 
+            Button(onClick = { mainViewModel.requestUsbAccess()}) {
+                Text("Request USB Access")
+            }
+
             Text(
                 text = "Satellite List",
                 style = MaterialTheme.typography.h5
             )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Button(onClick = {
+                val success = mainViewModel.openSerialPort()
+                if (success) {
+                    AppLogger.log("UART", "Serial connection opened successfully.")
+                } else {
+                    AppLogger.log("UART", "Failed to open serial connection.")
+                }
+            }) {
+                Text("Open Serial Connection")
+            }
         }
 
         // Satellite List

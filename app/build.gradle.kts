@@ -79,6 +79,6 @@ dependencies {
 
     implementation("androidx.navigation:navigation-compose:2.6.0-alpha01")
 
-
+    implementation("com.github.mik3y:usb-serial-for-android:3.8.1")
 
 }

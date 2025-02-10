@@ -14,6 +14,7 @@ import com.pranavj.satellitetrackingmount.repository.SatelliteRepository
 import com.pranavj.satellitetrackingmount.utils.AppLogger
 import com.pranavj.satellitetrackingmount.utils.SatellitePropagator
 import com.pranavj.satellitetrackingmount.utils.OrekitInitializer
+import com.pranavj.satellitetrackingmount.utils.UartManager
 import com.pranavj.satellitetrackingmount.utils.UserLocationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -31,6 +32,21 @@ import org.orekit.propagation.analytical.tle.TLE
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val satelliteRepository = SatelliteRepository(application)
+    private lateinit var uartManager: UartManager
+
+    fun requestUsbAccess(){
+        AppLogger.log("MainViewModel", "Requesting USB access...")
+        uartManager.requestUsbPermission()
+    }
+
+    fun openSerialPort(): Boolean{
+        AppLogger.log("MainViewModel", "Opening serial connection...")
+        return uartManager.openSerialConnection()
+    }
+
+    fun checkUsbPermission(): Boolean {
+        return uartManager.isUsbPermissionGranted()
+    }
 
     // StateFlow to hold the list of satellites
     private val _satellites = MutableStateFlow<List<Satellite>>(emptyList())
@@ -98,6 +114,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         OrekitInitializer.initializeOrekit(application)
         initializeUserLocation()
         fetchAndInsertSatellites()
+        uartManager = UartManager(application.applicationContext)
     }
 
     fun clearAllPaths() {
