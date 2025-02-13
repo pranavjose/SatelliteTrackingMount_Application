@@ -61,22 +61,26 @@ class UartManager(private val context: Context) {
         val device = driver.device
         val connection = usbManager.openDevice(device) ?: return false
 
-        if (driver.ports.isNotEmpty()) {
-            serialPort = driver.ports[0]
-            serialPort?.apply {
-                open(connection)
-                setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
-                AppLogger.log("UART", "Serial connection opened at 9600 baud.")
-            }
-        } else {
-            AppLogger.log("UART", "No available ports on USB device.")
+        if (connection == null) {
+            AppLogger.log("UART", "Failed to open USB connection.")
+            return false
         }
 
-
-        serialPort?.apply {
-            open(connection)
-            setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
-            AppLogger.log("UART", "Serial connection opened at 9600 baud.")
+        if (driver.ports.isNotEmpty()) {
+            serialPort = driver.ports[0]
+            try {
+                serialPort?.apply {
+                    open(connection)
+                    setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
+                    AppLogger.log("UART", "Serial connection opened at 9600 baud.")
+                }
+            } catch (e: IOException) {
+                AppLogger.log("UART", "Error opening serial connection: ${e.message}")
+                return false
+            }
+        } else {
+            AppLogger.log("UART", "No available ports on USB device")
+            return false
         }
         return true
     }
