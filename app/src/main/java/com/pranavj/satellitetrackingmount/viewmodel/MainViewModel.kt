@@ -28,6 +28,10 @@ import org.hipparchus.util.FastMath
 import org.orekit.bodies.GeodeticPoint
 import org.orekit.frames.TopocentricFrame
 import org.orekit.propagation.analytical.tle.TLE
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOn
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -260,5 +264,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun startAzElStreaming(noradId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val satellite = satelliteRepository.getSatelliteByNoradId(noradId)
+                val userLocation = userTopocentricFrame.value ?: throw IllegalStateException("User location not set")
+
+                val timeStepMillis = 5000L
+
+                val azElFlow = flow {
+                    var currentTime = SatellitePropagator.getCurrentStartDate()
+                    while (true) {
+                        val azElData = SatellitePropagator.generateAzimuthElevationPath(
+                            satellite.line1,
+                            satellite.line2,
+                            currentTime,
+                            durationSeconds = 300.0, // User-defined settings can be added later
+                            stepSeconds = 5.0, // User-defined settings can be added later
+                            userTopocentricFrame = userLocation
+                        ).lastOrNull()
+
+                        if (azElData != null){
+                            emit(azElData)
+                        }
+                        delay(timeStepMillis) //ERROR
+                        currentTime = currentTime.shiftedBy(timeStepMillis / 1000.0)
+                    }
+                }.flowOn(Dispatchers.IO)
+
+                uartManager.startStreaming(azElFlow, timeStepMillis)
+            } catch (e: Exception) {
+                //TO DO
+                AppLogger.log("SatelliteAzEl", "Error streaming Az/El: ${e.message}")
+            }
+        }
+    }
+
+    fun stopAzElStreaming() {
+        uartManager.stopStreaming()
+    }
 
 }

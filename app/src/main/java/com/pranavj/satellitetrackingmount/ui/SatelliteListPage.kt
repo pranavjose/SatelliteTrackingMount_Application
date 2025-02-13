@@ -8,6 +8,9 @@ import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -95,11 +98,20 @@ fun SatelliteListItem(satellite: Satellite, mainViewModel: MainViewModel) {
             }) {
                 Text("Plot Path (next 90 min)")
             }
+            var isStreaming by remember { mutableStateOf(false) }
+
             Button(onClick = {
                 // Generate Azimuth/Elevation
-                mainViewModel.generateAzimuthElevation(satellite.noradCatalogNumber)
+                isStreaming = !isStreaming
+                if (isStreaming) {
+                    mainViewModel.startAzElStreaming(satellite.noradCatalogNumber)
+                }
+                else {
+                    mainViewModel.stopAzElStreaming()
+                }
+//                mainViewModel.generateAzimuthElevation(satellite.noradCatalogNumber)
             }) {
-                Text("Send Az/El Data")
+                Text(if (isStreaming) "Stop Az/El Stream" else "Send Az/El Data")
             }
         }
     }

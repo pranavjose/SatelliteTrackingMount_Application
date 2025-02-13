@@ -71,8 +71,8 @@ class UartManager(private val context: Context) {
             try {
                 serialPort?.apply {
                     open(connection)
-                    setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
-                    AppLogger.log("UART", "Serial connection opened at 9600 baud.")
+                    setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
+                    AppLogger.log("UART", "Serial connection opened at 115200 baud.")
                 }
             } catch (e: IOException) {
                 AppLogger.log("UART", "Error opening serial connection: ${e.message}")
@@ -85,24 +85,27 @@ class UartManager(private val context: Context) {
         return true
     }
 
-    fun sendData(data: String){
+    fun sendData(azimuth: Double, elevation: Double){
         serialPort?.let {
             try {
-                it.write(data.toByteArray(), 1000)
-                AppLogger.log("UART", "Send: $data")
-            }
-            catch (e: IOException) {
+                val validAz = if (azimuth < 0) azimuth + 360 else azimuth
+                val validEl = if (elevation < 0) elevation + 180 else elevation
+
+                val formattedData = "i $validAz $validEl \r\n"
+                it.write(formattedData.toByteArray(), 1000)
+                AppLogger.log("UART", "Transmitted: $formattedData")
+
+            } catch (e: IOException) {
                 AppLogger.log("UART", "Error sending data: ${e.message}")
             }
         } ?: AppLogger.log("UART", "Serial port not initialized.")
     }
 
-    fun startStreaming(azElFlow: kotlinx.coroutines.flow.Flow<Pair<Double,Double>>){
+    fun startStreaming(azElFlow: kotlinx.coroutines.flow.Flow<Pair<Double,Double>>, timeStepMillis: Long) {
         job = CoroutineScope(Dispatchers.IO).launch {
-            azElFlow.collect() { (azimuth, elevation) ->
-                val formattedData = "<AZ:$azimuth,EL:$elevation>\n"
-                sendData(formattedData)
-                delay(500) //sends every 0.5 sec
+            azElFlow.collect { (azimuth, elevation) ->
+                sendData(azimuth, elevation)
+                delay(timeStepMillis) //sends every 0.5 sec
             }
         }
     }
