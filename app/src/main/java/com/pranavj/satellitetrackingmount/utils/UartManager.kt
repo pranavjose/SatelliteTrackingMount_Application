@@ -88,8 +88,22 @@ class UartManager(private val context: Context) {
     fun sendData(azimuth: Double, elevation: Double){
         serialPort?.let {
             try {
-                val validAz = if (azimuth < 0) azimuth + 360 else azimuth
-                val validEl = if (elevation < 0) elevation + 180 else elevation
+                var validAz = azimuth + 180
+                if (validAz >= 360){
+                    validAz -= 360
+                    if (validAz < 0){
+                        validAz += 360
+                    }
+                }
+//                if (azimuth < 0) azimuth + 360 else azimuth
+                var validEl = elevation + 90
+                if (validEl > 180 ){
+                    validEl = 180.0
+                    if (validEl < 0){
+                        validEl = 0.0
+                    }
+                }
+//                if (elevation < 0) elevation + 180 else elevation
 
                 val formattedData = "i $validAz $validEl \r\n"
                 it.write(formattedData.toByteArray(), 1000)
@@ -105,7 +119,7 @@ class UartManager(private val context: Context) {
         job = CoroutineScope(Dispatchers.IO).launch {
             azElFlow.collect { (azimuth, elevation) ->
                 sendData(azimuth, elevation)
-                delay(timeStepMillis) //sends every 0.5 sec
+                delay(timeStepMillis) //sends every 0.5 sec, or at the user-defined interval
             }
         }
     }

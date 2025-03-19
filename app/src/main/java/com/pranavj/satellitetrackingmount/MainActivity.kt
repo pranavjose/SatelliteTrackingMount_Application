@@ -82,6 +82,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import androidx.compose.foundation.layout.Arrangement
 
 
 class MainActivity : ComponentActivity() {
@@ -339,7 +340,7 @@ fun NavigationGraph(mainViewModel: MainViewModel) {
             SatelliteListPage(mainViewModel, navController)
         }
         composable("log_page"){
-            LogPage(navController)
+            LogPage(mainViewModel, navController)
         }
         composable("settings_page"){
             SettingsPage(navController, mainViewModel)
@@ -470,23 +471,55 @@ fun SatelliteLegendDropdown(
 }
 
 @Composable
-fun LogPage(navController: NavHostController) {
-    val logs = remember { AppLogger.getLogs() }
+fun LogPage(mainViewModel: MainViewModel, navController:NavHostController) {
+//    val logs = remember { AppLogger.getLogs() }
+    val logs by mainViewModel.logs.collectAsState()
 
-    LazyColumn(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
-        items(logs) { log ->
-            Text(
-                text = log,
-                style = MaterialTheme.typography.body2,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Log Output", style = MaterialTheme.typography.h5)
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(logs) { log ->
+                Text(
+                    text = log,
+                    style = MaterialTheme.typography.body2,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(onClick = { AppLogger.clearLogs() }) {
+                Text("Clear Logs")
+            }
+
+            Button(onClick = { navController.popBackStack() }){
+                Text("Back")
+            }
         }
     }
-    Button(onClick = { navController.popBackStack() }) {
-        Text("Back")
-    }
+
+//
+//    LazyColumn(modifier = Modifier
+//        .fillMaxSize()
+//        .padding(16.dp)) {
+//        items(logs) { log ->
+//            Text(
+//                text = log,
+//                style = MaterialTheme.typography.body2,
+//                modifier = Modifier.padding(vertical = 4.dp)
+//            )
+//        }
+//    }
+//    Button(onClick = { navController.popBackStack() }) {
+//        Text("Back")
+//    }
 }
 
 @Composable

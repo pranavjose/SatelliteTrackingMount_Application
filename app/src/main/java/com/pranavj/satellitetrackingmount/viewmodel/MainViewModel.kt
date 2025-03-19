@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.flowOn
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
+    val logs: StateFlow<List<String>> = AppLogger.logs
+
     private val satelliteRepository = SatelliteRepository(application)
     private lateinit var uartManager: UartManager
 
@@ -270,7 +272,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val satellite = satelliteRepository.getSatelliteByNoradId(noradId)
                 val userLocation = userTopocentricFrame.value ?: throw IllegalStateException("User location not set")
 
-                val timeStepMillis = 5000L
+                val timeStepMillis = 3000L
 
                 val azElFlow = flow {
                     var currentTime = SatellitePropagator.getCurrentStartDate()
@@ -279,8 +281,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             satellite.line1,
                             satellite.line2,
                             currentTime,
-                            durationSeconds = 300.0, // User-defined settings can be added later
-                            stepSeconds = 5.0, // User-defined settings can be added later
+                            durationSeconds = 1800.0, // User-defined settings can be added later
+                            stepSeconds = 3.0, // User-defined settings can be added later
                             userTopocentricFrame = userLocation
                         ).lastOrNull()
 
