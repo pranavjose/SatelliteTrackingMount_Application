@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import kotlin.math.*
 import org.hipparchus.util.FastMath
 import org.orekit.bodies.GeodeticPoint
 import org.orekit.frames.TopocentricFrame
@@ -31,7 +33,14 @@ import org.orekit.propagation.analytical.tle.TLE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOn
+import java.lang.Math.toRadians
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,6 +48,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val satelliteRepository = SatelliteRepository(application)
     private lateinit var uartManager: UartManager
+
+    private val _isStreaming = MutableStateFlow(false)
+    val isStreaming: StateFlow<Boolean> = _isStreaming
+
+    private val _streamingSatelliteName = MutableStateFlow<String?>(null)
+    val streamingSatelliteName: StateFlow<String?> = _streamingSatelliteName
 
     fun requestUsbAccess(){
         AppLogger.log("MainViewModel", "Requesting USB access...")
@@ -53,6 +68,98 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun checkUsbPermission(): Boolean {
         return uartManager.isUsbPermissionGranted()
     }
+
+    //SATELLITE LIST SORTING CODE:
+    data class SatelliteWithDistance(
+        val satellite: Satellite,
+        val startLat: Double,
+        val startLon: Double,
+        val distanceToUser: Double
+    )
+
+    private val _sortedSatellites = MutableStateFlow<List<Satellite>>(emptyList())
+    val sortedSatellites: StateFlow<List<Satellite>> = _sortedSatellites.asStateFlow()
+
+    fun sortSatellitesByDistance() {
+        AppLogger.log("Test", "Sorting satellites...")
+        viewModelScope.launch(Dispatchers.IO) {
+            val userLocation = userTopocentricFrame.value
+            if (userLocation == null) {
+                AppLogger.log("Satellite Sorting", "User location is null. Cannot sort satellites.")  // ✅ Log failure case
+                _sortedSatellites.value = _satellites.value  // Leave unsorted if no user location
+                return@launch
+            }
+
+            val userLat = userLocation.point.latitude
+            val userLon = userLocation.point.longitude
+            Log.d("Satellite Sorting", "User location: Lat: $userLat, Lon: $userLon")
+            AppLogger.log("Satellite Sorting", "User location: Lat: $userLat, Lon: $userLon")
+
+
+            val sortedList = _satellites.value.mapNotNull { satellite ->
+                val startPoint = SatellitePropagator.generateLatLonPath(
+                    satellite.line1, satellite.line2,
+                    SatellitePropagator.getCurrentStartDate(),
+                    duration = 1.0, stepSize = 0.5
+                ).firstOrNull()
+
+                if (startPoint == null) {
+                    Log.d("Satellite Sorting", "No valid starting position for satellite: ${satellite.name}")
+                    AppLogger.log("Satellite Sorting", "No valid starting position for satellite: ${satellite.name}")  // ✅ Debugging log
+                    return@mapNotNull null
+                }
+
+
+                val startLat = startPoint.first
+                val startLon = startPoint.second
+
+                val distance = calculateHaversineDistance(startLat, startLon, userLat, userLon)
+
+
+
+                Log.d("Satellite Sorting", "Satellite: ${satellite.name} | Start Lat: $startLat, Start Lon: $startLon | Distance: $distance km")
+                AppLogger.log(
+                    "Satellite Sorting",
+                    "Satellite: ${satellite.name} | Start Lat: $startLat, Start Lon: $startLon | Distance: $distance km"
+                )
+
+                SatelliteWithDistance(satellite, startLat, startLon, distance)
+            }
+
+            val finalSortedList = sortedList.sortedBy { it.distanceToUser }
+
+            if (sortedList.isNotEmpty()) {
+                _sortedSatellites.value = finalSortedList.map {it.satellite}
+
+                AppLogger.log("Satellite Sorting", "Satellites are sorted by least to greatest distance from user's location.")
+            } else {
+                AppLogger.log("Satellite Sorting", "Sorting failed: No satellites available.")
+            }
+        }
+    }
+
+    private fun calculateHaversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371.0  // Earth radius in km
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+
+        val radLat1 = Math.toRadians(lat1)
+        val radLat2 = Math.toRadians(lat2)
+
+//        val a = sin(dLat / 2).pow(2) + cos(radLat1) * cos(radLat2) * sin(dLon / 2).pow(2)
+        val a = sin(dLat/2) * sin(dLat/2) + cos(radLat1) * cos(radLat2) * sin(dLon /2) * sin(dLon / 2)
+
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return (R * c)  // Distance in km
+    }
+
+
+
+
+
+
+
 
     // StateFlow to hold the list of satellites
     private val _satellites = MutableStateFlow<List<Satellite>>(emptyList())
@@ -118,8 +225,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // Initialize Orekit
         OrekitInitializer.initializeOrekit(application)
+        // Initialize user location
         initializeUserLocation()
-        fetchAndInsertSatellites()
+        //fetch satellites, then sort them by distance to user
+        fetchAndInsertSatellites{
+//            sortSatellitesByDistance()
+            viewModelScope.launch {
+                _satellites.collect {
+                    if (_satellites.value.isNotEmpty()){
+                        sortSatellitesByDistance()
+                    }
+                }
+            }
+        }
         uartManager = UartManager(application.applicationContext)
     }
 
@@ -272,6 +390,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val satellite = satelliteRepository.getSatelliteByNoradId(noradId)
                 val userLocation = userTopocentricFrame.value ?: throw IllegalStateException("User location not set")
 
+                _isStreaming.value = true
+                _streamingSatelliteName.value = satellite.name
+
+
                 val timeStepMillis = 3000L
 
                 val azElFlow = flow {
@@ -303,6 +425,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopAzElStreaming() {
+        _isStreaming.value = false
+        _streamingSatelliteName.value = null
         uartManager.stopStreaming()
     }
 

@@ -21,7 +21,8 @@ import com.pranavj.satellitetrackingmount.viewmodel.MainViewModel
 @Composable
 fun SatelliteListPage(mainViewModel: MainViewModel, navController: NavHostController) {
     // Collect the list of satellites from the ViewModel
-    val satellites by mainViewModel.satellites.collectAsState()
+    //val satellites by mainViewModel.satellites.collectAsState()
+    val satellites by mainViewModel.sortedSatellites.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Page Header with Back Button

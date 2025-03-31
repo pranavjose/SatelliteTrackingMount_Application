@@ -134,6 +134,11 @@ class MainActivity : ComponentActivity() {
             Text("Permission is required to access your location.")
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(usbReceiver)
+    }
 }
 
 @Composable
@@ -354,6 +359,10 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
     val userTopocentricFrame by mainViewModel.userTopocentricFrame.collectAsState()
     var isLoading by remember { mutableStateOf(true) }
 
+    // NEW: Streaming status UI
+    val isStreaming by mainViewModel.isStreaming.collectAsState()
+    val streamingName by mainViewModel.streamingSatelliteName.collectAsState()
+
     // Simulate a loading delay if necessary
     LaunchedEffect(userTopocentricFrame) {
         if (userTopocentricFrame == null) {
@@ -397,6 +406,34 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
         ) {
             Text("View Satellite List")
         }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 80.dp) // Just above the Clear All button
+                .background(
+                    color = if (isStreaming) Color(0xFFB9F6CA) else Color(0xFFFFCDD2),
+                    shape = MaterialTheme.shapes.small
+                )
+                .padding(12.dp)
+        ) {
+            Text(
+                text = if (isStreaming) "Streaming: ON — $streamingName" else "Streaming: OFF",
+                color = if (isStreaming) Color(0xFF2E7D32) else Color(0xFFC62828),
+                style = MaterialTheme.typography.body1
+            )
+
+            if (isStreaming) {
+                Button(
+                    onClick = { mainViewModel.stopAzElStreaming() },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text("Stop Streaming")
+                }
+            }
+        }
+
+
         Button(
             onClick = { mainViewModel.clearAllPaths() },
             modifier = Modifier
@@ -617,6 +654,8 @@ fun SettingsPage( navController: NavHostController,
         )
     }
 }
+
+
 
 
 
