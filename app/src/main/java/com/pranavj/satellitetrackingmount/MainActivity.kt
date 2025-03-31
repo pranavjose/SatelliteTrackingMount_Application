@@ -83,6 +83,9 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.mutableDoubleStateOf
 
 
 class MainActivity : ComponentActivity() {
@@ -363,6 +366,15 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
     val isStreaming by mainViewModel.isStreaming.collectAsState()
     val streamingName by mainViewModel.streamingSatelliteName.collectAsState()
 
+    // NEW: offset status
+    var azOffset by remember { mutableStateOf(0.0) }
+    var elOffset by remember { mutableStateOf(0.0) }
+
+    // NEW: True north heading
+//    val trueHeading by mainViewModel.trueNorthHeading.collectAsState()
+
+
+
     // Simulate a loading delay if necessary
     LaunchedEffect(userTopocentricFrame) {
         if (userTopocentricFrame == null) {
@@ -442,6 +454,39 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
         ) {
             Text("Clear All")
         }
+
+        // Azimuth/Elevation Offset Controls (UI only)
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 80.dp)
+                .background(Color(0xFFE0E0E0), shape = MaterialTheme.shapes.small)
+                .padding(12.dp)
+        ) {
+            Text("Azimuth Offset", style = MaterialTheme.typography.subtitle2)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { azOffset -= 0.5 }) { Text("–") }
+                Text(
+                    text = String.format("%.1f", azOffset),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                Button(onClick = { azOffset += 0.5 }) { Text("+") }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text("Elevation Offset", style = MaterialTheme.typography.subtitle2)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { elOffset -= 0.5 }) { Text("–") }
+                Text(
+                    text = String.format("%.1f", elOffset),
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                Button(onClick = { elOffset += 0.5 }) { Text("+") }
+            }
+        }
+
+
         // Add a button to navigate to the Log Page
         Button(
             onClick = { navController.navigate("log_page") },
