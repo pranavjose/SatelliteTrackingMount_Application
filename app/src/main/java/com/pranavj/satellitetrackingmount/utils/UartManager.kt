@@ -65,6 +65,9 @@ class UartManager(private val context: Context) {
             AppLogger.log("UART", "Failed to open USB connection.")
             return false
         }
+        else{
+            AppLogger.log("UART", "Successfully opened USB connection.")
+        }
 
         if (driver.ports.isNotEmpty()) {
             serialPort = driver.ports[0]
@@ -129,5 +132,29 @@ class UartManager(private val context: Context) {
         serialPort?.close()
         serialPort = null
         AppLogger.log("UART", "Stopped UART Streaming")
+    }
+
+    fun sendAzimuthOffset(offset: Double) {
+        serialPort?.let {
+            try {
+                val cmd = "ta $offset \r\n"
+                it.write(cmd.toByteArray(), 1000)
+                AppLogger.log("UART", "Sent Azimuth Offset: $cmd")
+            } catch (e: IOException) {
+                AppLogger.log("UART", "Error sending Azimuth Offset: ${e.message}")
+            }
+        } ?: AppLogger.log("UART", "Serial port not initialized.")
+    }
+
+    fun sendElevationOffset(offset: Double) {
+        serialPort?.let {
+            try {
+                val cmd = "te $offset \r\n"
+                it.write(cmd.toByteArray(), 1000)
+                AppLogger.log("UART", "Sent Elevation Offset: $cmd")
+            } catch (e: IOException) {
+                AppLogger.log("UART", "Error sending Elevation Offset: ${e.message}")
+            }
+        } ?: AppLogger.log("UART", "Serial port not initialized.")
     }
 }

@@ -370,6 +370,14 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
     var azOffset by remember { mutableStateOf(0.0) }
     var elOffset by remember { mutableStateOf(0.0) }
 
+    LaunchedEffect(isStreaming) {
+        if (!isStreaming) {
+            azOffset = 0.0
+            elOffset = 0.0
+        }
+    }
+
+
     // NEW: True north heading
 //    val trueHeading by mainViewModel.trueNorthHeading.collectAsState()
 
@@ -463,26 +471,38 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
                 .background(Color(0xFFE0E0E0), shape = MaterialTheme.shapes.small)
                 .padding(12.dp)
         ) {
-            Text("Azimuth Offset", style = MaterialTheme.typography.subtitle2)
+            Text("Azimuth Offset [°]", style = MaterialTheme.typography.subtitle2)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { azOffset -= 0.5 }) { Text("–") }
+                Button(onClick = {
+                    azOffset -= 0.5
+                    mainViewModel.updateAzimuthOffset(azOffset)
+                }) { Text("–") }
                 Text(
                     text = String.format("%.1f", azOffset),
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                Button(onClick = { azOffset += 0.5 }) { Text("+") }
+                Button(onClick = {
+                    azOffset += 0.5
+                    mainViewModel.updateAzimuthOffset(azOffset)
+                }) { Text("+") }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text("Elevation Offset", style = MaterialTheme.typography.subtitle2)
+            Text("Elevation Offset [°]", style = MaterialTheme.typography.subtitle2)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { elOffset -= 0.5 }) { Text("–") }
+                Button(onClick = {
+                    elOffset -= 0.5
+                    mainViewModel.updateElevationOffset(elOffset)
+                }) { Text("–") }
                 Text(
                     text = String.format("%.1f", elOffset),
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                Button(onClick = { elOffset += 0.5 }) { Text("+") }
+                Button(onClick = {
+                    elOffset += 0.5
+                    mainViewModel.updateElevationOffset(elOffset)
+                }) { Text("+") }
             }
         }
 

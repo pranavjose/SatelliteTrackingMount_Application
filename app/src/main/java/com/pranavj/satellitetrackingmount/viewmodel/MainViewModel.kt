@@ -428,6 +428,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isStreaming.value = false
         _streamingSatelliteName.value = null
         uartManager.stopStreaming()
+
+        //reset az/el offsets
+        updateAzimuthOffset(0.0)
+        updateElevationOffset(0.0)
     }
 
+    fun updateAzimuthOffset(offset: Double) {
+        AppLogger.log("Offset", "New Azimuth Offset = $offset")
+        uartManager.sendAzimuthOffset(offset)
+    }
+
+    fun updateElevationOffset(offset: Double) {
+        AppLogger.log("Offset", "New Elevation Offset = $offset")
+        uartManager.sendElevationOffset(offset)
+    }
 }
