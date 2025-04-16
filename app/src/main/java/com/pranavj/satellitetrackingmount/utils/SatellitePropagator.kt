@@ -15,7 +15,8 @@ import org.orekit.utils.PVCoordinates
 import java.time.Instant
 import java.util.Date
 import org.hipparchus.util.FastMath
-import java.lang.Math.abs
+//import java.lang.Math.abs
+import kotlin.math.abs
 
 class SatellitePropagator {
 
@@ -69,7 +70,11 @@ class SatellitePropagator {
                     currentDate
                 )
 
-                path.add(Pair(Math.toDegrees(azimuth), Math.toDegrees(elevation)))
+
+                val azimuthCCW = (360 - Math.toDegrees(azimuth)) % 360
+                val elevationDeg = Math.toDegrees(elevation)
+
+                path.add(Pair(azimuthCCW, elevationDeg))
                 currentDate = currentDate.shiftedBy(stepSeconds)
             }
 
@@ -95,6 +100,8 @@ class SatellitePropagator {
             //val geodeticPoints = mutableListOf<GeodeticPoint>()
             val endDate = startDate.shiftedBy(duration)
             var currentDate = startDate
+            val maxJumpDegrees = 30.0 // threshold to skip extreme jumps
+
 
             while (currentDate.compareTo(endDate) <= 0) {
                 val pvCoordinates = propagator.getPVCoordinates(currentDate, earthShape.bodyFrame)
@@ -102,30 +109,45 @@ class SatellitePropagator {
                 //geodeticPoints.add(geodeticPoint)
 
                 val latDegrees = Math.toDegrees(geodeticPoint.latitude)
-                val lonDegrees = Math.toDegrees(geodeticPoint.longitude)
+                var lonDegrees = Math.toDegrees(geodeticPoint.longitude)
 
-                val adjustedLongitude = if (lonDegrees < -180) lonDegrees + 360 else if (lonDegrees > 180) lonDegrees - 360 else lonDegrees
-                val adjustedLatitude = latDegrees.coerceIn(-90.0, 90.0)
+//                val adjustedLongitude = if (lonDegrees < -180) lonDegrees + 360 else if (lonDegrees > 180) lonDegrees - 360 else lonDegrees
+//                val adjustedLatitude = latDegrees.coerceIn(-90.0, 90.0)
 
 
                 // Skip points very close to the poles to avoid artifacts
-                if (adjustedLatitude > 89.5 || adjustedLatitude < -89.5) {
+//                if (adjustedLatitude > 89.5 || adjustedLatitude < -89.5) {
+//                    currentDate = currentDate.shiftedBy(stepSize)
+//                    continue
+//                }
+                if (abs(latDegrees) >= 85.0) {
                     currentDate = currentDate.shiftedBy(stepSize)
                     continue
                 }
 
-                // Avoid duplicate points
-                if (latLonPoints.isNotEmpty()) {
+
+                if (latLonPoints.isNotEmpty()){
                     val (prevLat, prevLon) = latLonPoints.last()
-                    if (kotlin.math.abs(prevLat - adjustedLatitude) < 0.01 && kotlin.math.abs(
-                            prevLon - adjustedLongitude
-                        ) < 0.01) {
+                    //unwrap longitude
+                    val delta = lonDegrees - prevLon
+                    if (delta > 180) lonDegrees -= 360
+                    else if (delta < -180) lonDegrees += 360
+
+                    val latJump = abs(prevLat - latDegrees)
+                    val lonJump = abs(prevLon - lonDegrees)
+                    if (latJump > maxJumpDegrees || lonJump > maxJumpDegrees) {
+                        currentDate = currentDate.shiftedBy(stepSize)
+                        continue
+                    }
+
+                    //avoid near duplicate points
+                    if (latJump < 0.01 && lonJump < 0.01) {
                         currentDate = currentDate.shiftedBy(stepSize)
                         continue
                     }
                 }
 
-                latLonPoints.add(Pair(adjustedLatitude, adjustedLongitude))
+                latLonPoints.add(Pair(latDegrees, lonDegrees))
                 currentDate = currentDate.shiftedBy(stepSize)
             }
 

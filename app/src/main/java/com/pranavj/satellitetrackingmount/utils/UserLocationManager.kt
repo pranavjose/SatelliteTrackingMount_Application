@@ -18,7 +18,10 @@ class UserLocationManager(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun fetchRealUserLocation(onLocationAvailable: (TopocentricFrame) -> Unit) {
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+        val priority = com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
+
+        fusedLocationClient.getCurrentLocation(priority, null).addOnSuccessListener { location ->
+//        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
                 val latitudeRadians = Math.toRadians(location.latitude)
                 val longitudeRadians = Math.toRadians(location.longitude)

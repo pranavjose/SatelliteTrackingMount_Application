@@ -89,24 +89,23 @@ class UartManager(private val context: Context) {
     }
 
     fun sendData(azimuth: Double, elevation: Double){
+        // Coerce azimuth into [0, 360]
+//        val validAz = ((azimuth % 360) + 360) % 360  // handles negative inputs
+//
+//        // Clamp elevation into [0, 180]
+//        val validEl = elevation.coerceIn(0.0, 180.0)
+//
+////         ✅ TEMPORARY: Log instead of writing to serial
+//        AppLogger.log("StreamTest", "Simulated TX: Az=$validAz°, El=$validEl°")
+//        Log.d("StreamTest", "Simulated TX: Az=$validAz°, El=$validEl°")
+
         serialPort?.let {
             try {
-                var validAz = azimuth + 180
-                if (validAz >= 360){
-                    validAz -= 360
-                    if (validAz < 0){
-                        validAz += 360
-                    }
-                }
-//                if (azimuth < 0) azimuth + 360 else azimuth
-                var validEl = elevation + 90
-                if (validEl > 180 ){
-                    validEl = 180.0
-                    if (validEl < 0){
-                        validEl = 0.0
-                    }
-                }
-//                if (elevation < 0) elevation + 180 else elevation
+                // Coerce azimuth into [0, 360]
+                val validAz = ((azimuth % 360) + 360) % 360  // handles negative inputs
+
+                // Clamp elevation into [0, 180]
+                val validEl = elevation.coerceIn(0.0, 180.0)
 
                 val formattedData = "i $validAz $validEl \r\n"
                 it.write(formattedData.toByteArray(), 1000)
@@ -129,9 +128,19 @@ class UartManager(private val context: Context) {
 
     fun stopStreaming() {
         job?.cancel()
-        serialPort?.close()
-        serialPort = null
-        AppLogger.log("UART", "Stopped UART Streaming")
+//        serialPort?.close()
+//        serialPort = null
+        serialPort?.let {
+            try {
+                val resetOffset = "tz \r\n"
+                it.write(resetOffset.toByteArray(), 1000)
+                val formattedData = "i 0.0 90.0 \r\n"
+                it.write(formattedData.toByteArray(), 1000)
+                AppLogger.log("UART", "Stopped UART streaming.")
+            } catch (e: IOException) {
+                AppLogger.log("UART", "Error stopping streaming: ${e.message}")
+            }
+        } ?: AppLogger.log("UART", "Serial port not initialized.")
     }
 
     fun sendAzimuthOffset(offset: Double) {

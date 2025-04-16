@@ -34,7 +34,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import org.orekit.propagation.analytical.tle.TLEPropagator
+import org.orekit.time.TimeScalesFactory
 import java.lang.Math.toRadians
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -90,28 +93,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val userLat = userLocation.point.latitude
-            val userLon = userLocation.point.longitude
+            val userLat = Math.toDegrees(userLocation.point.latitude)
+            val userLon = Math.toDegrees(userLocation.point.longitude)
             Log.d("Satellite Sorting", "User location: Lat: $userLat, Lon: $userLon")
             AppLogger.log("Satellite Sorting", "User location: Lat: $userLat, Lon: $userLon")
 
 
             val sortedList = _satellites.value.mapNotNull { satellite ->
-                val startPoint = SatellitePropagator.generateLatLonPath(
+
+                val tle = TLE(satellite.line1, satellite.line2)
+                val tleEpoch = tle.date.toDate(TimeScalesFactory.getUTC())
+//                AppLogger.log("SortDebug", "Satellite: ${satellite.name} | TLE Epoch: $tleEpoch")
+
+                val path = SatellitePropagator.generateLatLonPath(
                     satellite.line1, satellite.line2,
                     SatellitePropagator.getCurrentStartDate(),
-                    duration = 1.0, stepSize = 0.5
-                ).firstOrNull()
+                    duration = 300.0, stepSize = 1.0
+                )
+
+                val startPoint = path.getOrNull(300)
+
+
 
                 if (startPoint == null) {
-                    Log.d("Satellite Sorting", "No valid starting position for satellite: ${satellite.name}")
-                    AppLogger.log("Satellite Sorting", "No valid starting position for satellite: ${satellite.name}")  // ✅ Debugging log
+                    Log.d("Satellite Sorting", "No valid future position for satellite: ${satellite.name}")
+                    AppLogger.log("Satellite Sorting", "No valid future position for satellite: ${satellite.name}")  // ✅ Debugging log
                     return@mapNotNull null
                 }
 
-
                 val startLat = startPoint.first
                 val startLon = startPoint.second
+//                Log.d("SortDebug", "StartPoint = ($startLat, $startLon), User = ($userLat, $userLon)")
+//                AppLogger.log("SortDebug", "StartPoint = ($startLat, $startLon), User = ($userLat, $userLon)")
 
                 val distance = calculateHaversineDistance(startLat, startLon, userLat, userLon)
 
@@ -131,7 +144,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (sortedList.isNotEmpty()) {
                 _sortedSatellites.value = finalSortedList.map {it.satellite}
 
-                AppLogger.log("Satellite Sorting", "Satellites are sorted by least to greatest distance from user's location.")
+                AppLogger.log("Satellite Sorting", "Satellites (5 min in future) are sorted by least to greatest distance from user's location.")
             } else {
                 AppLogger.log("Satellite Sorting", "Sorting failed: No satellites available.")
             }
@@ -141,7 +154,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun calculateHaversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371.0  // Earth radius in km
         val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
+//        val dLon = Math.toRadians(lon2 - lon1)
+        var dLon = Math.toRadians(lon2 - lon1)
+        if (dLon > Math.PI) dLon -= 2 * Math.PI
+        else if (dLon < -Math.PI) dLon += 2 * Math.PI
 
         val radLat1 = Math.toRadians(lat1)
         val radLat2 = Math.toRadians(lat2)
@@ -193,7 +209,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Color.Green,
         Color.Cyan,
         Color.Magenta,
-        Color.Yellow
+        Color.Yellow,
+        Color(0xFFFFA500), // Orange
+        Color(0xFF8A2BE2), // BlueViolet
+        Color(0xFF00FA9A), // MediumSpringGreen (brighter, clearer)
+        Color(0xFFB22222), // FireBrick (darker red)
+        Color(0xFF40E0D0), // Turquoise (distinct from Cyan)
+        Color(0xFFFF1493), // DeepPink (stronger than HotPink)
+        Color(0xFF7CFC00), // LawnGreen (distinct from Chartreuse)
+        Color(0xFF4169E1), // RoyalBlue (darker than DodgerBlue)
+        Color(0xFFFFD700)  // Gold (brighter than GoldenRod)
     )
 
     //private val _satellitePaths = MutableLiveData<Map<Satellite, PathMetadata>>()
@@ -226,19 +251,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Initialize Orekit
         OrekitInitializer.initializeOrekit(application)
         // Initialize user location
+//        initializeUserLocation()
+//        //fetch satellites, then sort them by distance to user
+//        fetchAndInsertSatellites{
+////            sortSatellitesByDistance()
+//            viewModelScope.launch {
+//                _satellites.collect {
+//                    if (_satellites.value.isNotEmpty()){
+//                        sortSatellitesByDistance()
+//                    }
+//                }
+//            }
+//        }
+        uartManager = UartManager(application.applicationContext)
+
+        //fetch satellites
+        fetchAndInsertSatellites {
+            _databaseReady.value = true
+        }
+
         initializeUserLocation()
-        //fetch satellites, then sort them by distance to user
-        fetchAndInsertSatellites{
-//            sortSatellitesByDistance()
-            viewModelScope.launch {
-                _satellites.collect {
-                    if (_satellites.value.isNotEmpty()){
-                        sortSatellitesByDistance()
-                    }
+
+        viewModelScope.launch {
+            combine(userTopocentricFrame, satellites) { location, satelliteList ->
+                location != null && satelliteList.isNotEmpty()
+            }.collect { ready ->
+                if (ready) {
+                    sortSatellitesByDistance()
                 }
             }
         }
-        uartManager = UartManager(application.applicationContext)
     }
 
     fun clearAllPaths() {
@@ -396,27 +438,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 val timeStepMillis = 3000L
 
-                val azElFlow = flow {
-                    var currentTime = SatellitePropagator.getCurrentStartDate()
-                    while (true) {
-                        val azElData = SatellitePropagator.generateAzimuthElevationPath(
-                            satellite.line1,
-                            satellite.line2,
-                            currentTime,
-                            durationSeconds = 1800.0, // User-defined settings can be added later
-                            stepSeconds = 3.0, // User-defined settings can be added later
-                            userTopocentricFrame = userLocation
-                        ).lastOrNull()
+                val tle = TLE(satellite.line1, satellite.line2)
+                val propagator = TLEPropagator.selectExtrapolator(tle)
 
-                        if (azElData != null){
-                            emit(azElData)
-                        }
+
+                val azElFlow = flow {
+                    while (true) {
+                        val currentTime = SatellitePropagator.getCurrentStartDate()
+                        val pvCoordinates = propagator.getPVCoordinates(currentTime, userLocation.parentShape.bodyFrame)
+
+                        val azimuthRad = userLocation.getAzimuth(pvCoordinates.position, userLocation.parentShape.bodyFrame, currentTime)
+                        val elevationRad = userLocation.getElevation(pvCoordinates.position, userLocation.parentShape.bodyFrame, currentTime)
+
+
+                        val azimuthCW = Math.toDegrees(azimuthRad)
+                        val azimuthCCW = (360 - azimuthCW) % 360 //convert to CCW
+                        val elevationDeg = Math.toDegrees(elevationRad)
+                        AppLogger.log("StreamTest", "Azimuth CCW: ${azimuthCCW}°, Elevation: ${elevationDeg}°")
+
+                        emit(Pair(azimuthCCW, elevationDeg))
+
                         delay(timeStepMillis) //ERROR
-                        currentTime = currentTime.shiftedBy(timeStepMillis / 1000.0)
                     }
                 }.flowOn(Dispatchers.IO)
 
                 uartManager.startStreaming(azElFlow, timeStepMillis)
+
             } catch (e: Exception) {
                 //TO DO
                 AppLogger.log("SatelliteAzEl", "Error streaming Az/El: ${e.message}")

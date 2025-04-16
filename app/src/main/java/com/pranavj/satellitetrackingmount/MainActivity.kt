@@ -85,6 +85,7 @@ import android.hardware.usb.UsbManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.mutableDoubleStateOf
 
 
@@ -576,6 +577,13 @@ fun SatelliteLegendDropdown(
 fun LogPage(mainViewModel: MainViewModel, navController:NavHostController) {
 //    val logs = remember { AppLogger.getLogs() }
     val logs by mainViewModel.logs.collectAsState()
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(logs.size) {
+        if (logs.isNotEmpty()){
+            listState.animateScrollToItem(logs.lastIndex.coerceAtLeast(0))
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -584,7 +592,7 @@ fun LogPage(mainViewModel: MainViewModel, navController:NavHostController) {
     ) {
         Text("Log Output", style = MaterialTheme.typography.h5)
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
+        LazyColumn(modifier = Modifier.weight(1f), state = listState) {
             items(logs) { log ->
                 Text(
                     text = log,
