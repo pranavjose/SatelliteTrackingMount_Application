@@ -88,6 +88,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.mutableDoubleStateOf
 
+import androidx.compose.material.icons.filled.Info
+
 
 class MainActivity : ComponentActivity() {
 
@@ -354,6 +356,9 @@ fun NavigationGraph(mainViewModel: MainViewModel) {
         composable("settings_page"){
             SettingsPage(navController, mainViewModel)
         }
+        composable("help_page") {
+            HelpPage(navController)
+        }
     }
 }
 
@@ -519,19 +524,32 @@ fun MapScreenWithNavigation(navController: NavHostController, mainViewModel: Mai
         }
 
         // Add a button to navigate to the Settings page
-        Button(
-            onClick = { navController.navigate("settings_page") },
+        Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Filled.Settings,
-                contentDescription = "Settings Icon",
-                tint = MaterialTheme.colors.onPrimary,
-                modifier = Modifier.size(24.dp)
-            )
+            Button(onClick = { navController.navigate("help_page") }) {
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = "Help Icon",
+                    tint = MaterialTheme.colors.onPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Button(onClick = { navController.navigate("settings_page") }) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Settings Icon",
+                    tint = MaterialTheme.colors.onPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
+
 
     }
 }
@@ -727,6 +745,85 @@ fun SettingsPage( navController: NavHostController,
         )
     }
 }
+
+@Composable
+fun HelpPage(navController: NavHostController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Help / FAQ", style = MaterialTheme.typography.h5) // Bigger title
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("Important: TLE data is only valid for ~24 hours after importing. Please ensure that you have imported a current TLE dataset to ensure accurate satellite tracking.", style = MaterialTheme.typography.h6)
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 Log Page", style = MaterialTheme.typography.h6)
+        Text(
+            "Please check the log page, which is located at the bottom left corner of the main map page, during mount operation to ensure all functions are working as intended, and to view the tracking coordinates streamed to the tracking mount.",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 How do I connect to the tracking mount?", style = MaterialTheme.typography.h6)
+        Text(
+            "Connect the USB cable from the mount to the tablet. Then, tap 'Request USB Access' then 'Open Serial Connection' when your USB device is plugged in.",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 How do I import satellite data?", style = MaterialTheme.typography.h6)
+        Text(
+            "The application comes preloaded with the most current satellite data for amateur radio. This data comes from CelesTrak (https://celestrak.org). If you want to import your own satellite data, navigate to the settings page and import a TLE dataset, with file extension '.tle'",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 How do I plot a satellite path?", style = MaterialTheme.typography.h6)
+        Text(
+            "The list of satellites is ordered from which satellites will be closest to you in 5 minutes, allowing for easy tracking. Tap 'Plot Path' next to any satellite to visualize its path for the next 90 minutes.",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 What does 'Send Az/El Data' do?", style = MaterialTheme.typography.h6)
+        Text(
+            "It streams tracking path data to your mount. You can change the path propagation parameters (duration and step size) in the settings page.",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 How do I stop streaming data to the mount?", style = MaterialTheme.typography.h6)
+        Text(
+            "After you have started streaming data to the mount, the main map page will have an icon on the bottom right corner of the screen, indicating that streaming is on and which satellite is being streamed. From there, all you need to do is click 'Stop Streaming'",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text("🔹 What does 'Clear All' do?", style = MaterialTheme.typography.h6)
+        Text(
+            "It removes all plotted satellite paths from the map.",
+            style = MaterialTheme.typography.body1
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(onClick = { navController.popBackStack() }) {
+            Text("Back")
+        }
+    }
+}
+
+
 
 
 

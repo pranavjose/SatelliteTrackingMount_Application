@@ -6,6 +6,7 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
+import android.widget.Toast
 import com.pranavj.satellitetrackingmount.utils.AppLogger
 import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
@@ -26,6 +27,7 @@ class UartManager(private val context: Context) {
         val deviceList = usbManager.deviceList
         if (deviceList.isEmpty()){
             AppLogger.log("UART", "No USB devices found.")
+            Toast.makeText(context, "No USB devices found.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -39,6 +41,7 @@ class UartManager(private val context: Context) {
             AppLogger.log("UART", "Requesting USB permission for device: ${device.deviceId}")
         } else {
             AppLogger.log("UART", "USB Permission already granted")
+            Toast.makeText(context, "USB Permission already granted.", Toast.LENGTH_SHORT).show()
         }
     }
 

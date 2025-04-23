@@ -454,7 +454,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val azimuthCW = Math.toDegrees(azimuthRad)
                         val azimuthCCW = (360 - azimuthCW) % 360 //convert to CCW
                         val elevationDeg = Math.toDegrees(elevationRad)
-                        AppLogger.log("StreamTest", "Azimuth CCW: ${azimuthCCW}°, Elevation: ${elevationDeg}°")
+//                        AppLogger.log("StreamTest", "Azimuth CCW: ${azimuthCCW}°, Elevation: ${elevationDeg}°")
 
                         emit(Pair(azimuthCCW, elevationDeg))
 

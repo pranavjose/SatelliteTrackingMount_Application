@@ -1,5 +1,6 @@
 package com.pranavj.satellitetrackingmount.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.pranavj.satellitetrackingmount.model.Satellite
@@ -23,6 +25,7 @@ fun SatelliteListPage(mainViewModel: MainViewModel, navController: NavHostContro
     // Collect the list of satellites from the ViewModel
     //val satellites by mainViewModel.satellites.collectAsState()
     val satellites by mainViewModel.sortedSatellites.collectAsState()
+    val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Page Header with Back Button
@@ -36,32 +39,32 @@ fun SatelliteListPage(mainViewModel: MainViewModel, navController: NavHostContro
                 Text("Back")
             }
 
-            Button(onClick = { mainViewModel.requestUsbAccess()}) {
-                Text("Request USB Access")
+            // 👇 Group these in a Row to stay together
+            Row {
+                Button(onClick = { mainViewModel.requestUsbAccess() }) {
+                    Text("Request USB Access")
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(onClick = {
+                    val success = mainViewModel.openSerialPort()
+                    if (success) {
+                        AppLogger.log("UART", "Serial connection opened successfully.")
+                        Toast.makeText(context, "Serial connection opened successfully.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        AppLogger.log("UART", "Failed to open serial connection.")
+                        Toast.makeText(context, "Failed to open serial connection.", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("Open Serial Connection")
+                }
             }
 
             Text(
                 text = "Satellite List",
                 style = MaterialTheme.typography.h5
             )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Button(onClick = {
-                val success = mainViewModel.openSerialPort()
-                if (success) {
-                    AppLogger.log("UART", "Serial connection opened successfully.")
-                } else {
-                    AppLogger.log("UART", "Failed to open serial connection.")
-                }
-            }) {
-                Text("Open Serial Connection")
-            }
         }
 
         // Satellite List
@@ -76,6 +79,7 @@ fun SatelliteListPage(mainViewModel: MainViewModel, navController: NavHostContro
 
 @Composable
 fun SatelliteListItem(satellite: Satellite, mainViewModel: MainViewModel) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .padding(16.dp)
