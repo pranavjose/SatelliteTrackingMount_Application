@@ -761,9 +761,9 @@ fun HelpPage(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text("🔹 Log Page", style = MaterialTheme.typography.h6)
+        Text("🔹 How do I navigate the map?", style = MaterialTheme.typography.h6)
         Text(
-            "Please check the log page, which is located at the bottom left corner of the main map page, during mount operation to ensure all functions are working as intended, and to view the tracking coordinates streamed to the tracking mount.",
+            "Use one finger to pan, two fingers to zoom, and three fingers to tilt the view.",
             style = MaterialTheme.typography.body1
         )
 
@@ -771,7 +771,7 @@ fun HelpPage(navController: NavHostController) {
 
         Text("🔹 How do I connect to the tracking mount?", style = MaterialTheme.typography.h6)
         Text(
-            "Connect the USB cable from the mount to the tablet. Then, tap 'Request USB Access' then 'Open Serial Connection' when your USB device is plugged in.",
+            "Connect the USB cable from the mount to the tablet. Then, click on the 'View Satellite List' button, tap 'Request USB Access' then 'Open Serial Connection' when your USB device is plugged in.",
             style = MaterialTheme.typography.body1
         )
 
