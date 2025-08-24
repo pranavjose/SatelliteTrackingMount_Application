@@ -14,11 +14,11 @@ Android application that acts as the **interface, database, and control system**
 - **TLE Database**: Preloaded with amateur radio TLE datasets. Users can import `.tle` files, which are parsed into satellite objects and stored locally.
 - **Interactive World Map UI**: Touch-interactive map with pinch-to-zoom and pan, displaying current location and plotted satellite paths.
 - **Satellite Path Plotting**: 90-minute orbital paths, color-coded per satellite with start/stop markers.
-  Path Plotting → ![Map UI](images/map.jpg)
+  ![Map UI](images/map.jpg)
 - **Settings Page**: Import new TLE datasets, adjust path propagation parameters (tracking duration, step size).
-  Settings Page → ![Settings](images/settings.jpg)
+  ![Settings](images/settings.jpg)
 - **Log Page**: Displays TLE import logs, settings changes, and azimuth/elevation propagation outputs.
-  Log Page → ![Log](images/log.jpg)
+  ![Log](images/log.jpg)
 - **Path Propagation (Az/El)**: Generates satellite tracking paths relative to user’s position and sends them to the microcontroller.
 - **UART Communication**: Transmits propagated satellite paths via USB-C serial connection to the mount’s microcontroller.
 - **Manual Adjustment**: After propagation, users can manually adjust antenna tracking paths from the UI.
@@ -60,6 +60,7 @@ Android application that acts as the **interface, database, and control system**
 - **Automatic TLE Updates**: Download updated datasets when connected to the internet.
 
 ---
+
 
 
 
