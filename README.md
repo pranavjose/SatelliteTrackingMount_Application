@@ -22,7 +22,7 @@ Android application that acts as the **interface, database, and control system**
 - **Path Propagation (Az/El)**: Generates satellite tracking paths relative to user’s position and sends them to the microcontroller.
 - **UART Communication**: Transmits propagated satellite paths via USB-C serial connection to the mount’s microcontroller.
 - **Manual Adjustment**: After propagation, users can manually adjust antenna tracking paths from the UI.
-  → ![Log](images/flow.png)
+  ![Log](images/flow.png)
 
 ---
 
@@ -60,6 +60,7 @@ Android application that acts as the **interface, database, and control system**
 - **Automatic TLE Updates**: Download updated datasets when connected to the internet.
 
 ---
+
 
 
 
