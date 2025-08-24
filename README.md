@@ -17,7 +17,7 @@ Android application that acts as the **interface, database, and control system**
   ![Map UI](images/map.jpg)
 - **Settings Page**: Import new TLE datasets, adjust path propagation parameters (tracking duration, step size).
   ![Settings](images/settings.jpg)
-- **Log Page**: Displays TLE import logs, settings changes, and azimuth/elevation propagation outputs.
+- **Log Page**: Displays errors, TLE import logs, settings changes, and azimuth/elevation propagation outputs.
   ![Log](images/log.jpg)
 - **Path Propagation (Az/El)**: Generates satellite tracking paths relative to user’s position and sends them to the microcontroller.
 - **UART Communication**: Transmits propagated satellite paths via USB-C serial connection to the mount’s microcontroller.
@@ -61,6 +61,7 @@ Android application that acts as the **interface, database, and control system**
 - **Automatic TLE Updates**: Download updated datasets when connected to the internet.
 
 ---
+
 
 
 
