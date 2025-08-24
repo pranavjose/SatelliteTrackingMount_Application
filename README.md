@@ -50,6 +50,7 @@ Android application that acts as the **interface, database, and control system**
 ## Limitations
 
 - Fewer advanced satellite-tracking features compared to PC software due to hardware constraints of mobile devices.
+- Requires Android SDK 34 or higher.
 
 ---
 
@@ -60,6 +61,7 @@ Android application that acts as the **interface, database, and control system**
 - **Automatic TLE Updates**: Download updated datasets when connected to the internet.
 
 ---
+
 
 
 
