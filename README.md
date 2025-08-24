@@ -57,4 +57,3 @@ Android application that acts as the **interface, database, and control system**
 
 ---
 
-## Project Structure
